@@ -1,0 +1,227 @@
+rules_version = '2';
+// FlowBoard access rules. The database is reachable directly over the public API, so these rules — not the UI —
+// are the boundary. Tested by test/rules.test.mjs (npm run test:rules) and probed live after every deploy.
+//
+// Model:  workspaces/{wid}                      name, ownerUid
+//         workspaces/{wid}/members/{uid}        role: owner | manager | operator
+//                                               scopes: card ids. Empty/absent = the whole workspace. Otherwise this
+//                                               person only ever receives, and can only touch, those cards and what
+//                                               is under them. Set by the owner (or carried in by an invite).
+//         workspaces/{wid}/invites/{email}      role (and scopes) offered to that (verified) email address
+//         workspaces/{wid}/nodes/{id}           work items. `anc` = ids from the portfolio card down to this card.
+//         workspaces/{wid}/elements/{id}        whiteboard elements. `anc` = the `anc` of the card whose board it is on.
+//                                               An item with no `anc` is invisible to anyone with scopes.
+//         workspaces/{wid}/private/presence     { room }: the secret name of this workspace's live session in the
+//                                               Realtime Database (see database.rules.json). Members only.
+//         users/{uid}                           the signed-in user's profile: workspaces, `created` (how many workspaces
+//                                               they have started; only ever goes up), and coarse facts for the admin
+//                                               panel (time zone, language, device, first/last seen)
+//         users/{uid}/inbox/{id}                notifications (@mentions) for that person. A teammate may drop one in;
+//                                               only the owner reads, marks or deletes them.
+//         admins/{uid or verified email}        who may open the admin panel. Console/CLI only, so the list of admins
+//                                               never sits in this public file.
+//         creators/{email}                      legacy allowlist (sign-up is open now); still readable, never writable.
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    // Only a Google-verified address counts. Never trust an unverified email claim.
+    function myEmail() { return request.auth.token.email_verified == true ? request.auth.token.email.lower() : ''; }
+    function memberDoc(wid) { return /databases/$(db)/documents/workspaces/$(wid)/members/$(me()); }
+    function isMember(wid) { return signedIn() && exists(memberDoc(wid)); }
+    function myRole(wid) { return get(memberDoc(wid)).data.role; }
+    function canManage(wid) { return isMember(wid) && myRole(wid) in ['owner', 'manager']; }
+    function isOwner(wid) { return isMember(wid) && myRole(wid) == 'owner'; }
+    function myInvite(wid) { return get(/databases/$(db)/documents/workspaces/$(wid)/invites/$(myEmail())).data; }
+    function invitedAs(wid) { return myInvite(wid).role; }
+
+    // Card-level access. Someone with scopes is confined to those branches for reading AND writing.
+    function myScopes(wid) { return get(memberDoc(wid)).data.get('scopes', []); }
+    function unscoped(wid) { return myScopes(wid).size() == 0; }
+    function inScope(wid, data) { return unscoped(wid) || data.get('anc', []).hasAny(myScopes(wid)); }
+    function scopeList(data) { return data.get('scopes', []) is list && data.get('scopes', []).size() <= 10; }
+    // An invite a scoped manager may make or cancel: only for (some of) their own cards, never the whole workspace.
+    function withinMine(wid, data) { return unscoped(wid) || (data.get('scopes', []).size() > 0 && data.get('scopes', []).hasOnly(myScopes(wid))); }
+    // What a scoped manager writes must really sit where it claims to: a card's `anc` is its parent's plus itself,
+    // and the parent is inside their branch; a board item's `anc` is that of the card or page it sits on. Without
+    // this they could tag new things so they show up inside someone else's project.
+    function nodePlaced(wid, id) {
+      let anc = request.resource.data.anc;
+      let parent = getAfter(/databases/$(db)/documents/workspaces/$(wid)/nodes/$(request.resource.data.parentId)).data.get('anc', []);
+      return anc is list && anc.size() <= 60 && parent.hasAny(myScopes(wid)) && anc == parent.concat([id]);
+    }
+    function hostAnc(wid, host) {
+      return existsAfter(/databases/$(db)/documents/workspaces/$(wid)/nodes/$(host))
+        ? getAfter(/databases/$(db)/documents/workspaces/$(wid)/nodes/$(host)).data.get('anc', [])
+        : getAfter(/databases/$(db)/documents/workspaces/$(wid)/elements/$(host)).data.get('anc', []);
+    }
+    function elementPlaced(wid) {
+      let anc = request.resource.data.anc;
+      return anc is list && anc.size() <= 60 && anc.hasAny(myScopes(wid))
+        && anc == hostAnc(wid, request.resource.data.scopeId.split(':')[0]);
+    }
+
+    // Sign-up is open, but only to a verified address (Google, or an email link that was opened), and each account
+    // may start at most CAP workspaces. The cap is a counter on the profile that the same batch must raise by one;
+    // the profile rule never lets it go down, and the profile can't be deleted, so it can't be reset.
+    function isAdmin() {
+      return signedIn() && (exists(/databases/$(db)/documents/admins/$(me()))
+        || (myEmail() != '' && exists(/databases/$(db)/documents/admins/$(myEmail()))));
+    }
+    function userDoc() { return /databases/$(db)/documents/users/$(me()); }
+    function createdBefore() { return exists(userDoc()) ? get(userDoc()).data.get('created', 0) : 0; }
+    function mayCreateWorkspace() {
+      return myEmail() != '' && existsAfter(userDoc())
+        && getAfter(userDoc()).data.get('created', 0) == createdBefore() + 1
+        && (getAfter(userDoc()).data.get('created', 0) <= 5 || isAdmin());
+    }
+    function profileOk(d) {
+      return d.keys().hasOnly(['email', 'name', 'workspaceIds', 'created', 'createdAt', 'lastActive', 'provider', 'tz', 'lang', 'device'])
+        && d.workspaceIds is list && d.workspaceIds.size() <= 50
+        && d.email is string && d.email.size() <= 320
+        && d.name is string && d.name.size() <= 200
+        && d.get('created', 0) is int
+        && d.get('createdAt', 0) is int && d.get('lastActive', 0) is int
+        && d.get('provider', '') in ['', 'google', 'email']
+        && d.get('tz', '') is string && d.get('tz', '').size() <= 64
+        && d.get('lang', '') is string && d.get('lang', '').size() <= 20
+        && d.get('device', '') is string && d.get('device', '').size() <= 20;
+    }
+
+    match /admins/{uid} {
+      allow read: if signedIn() && (me() == uid || (myEmail() != '' && myEmail() == uid));
+      allow write: if false;
+    }
+
+    match /creators/{email} {
+      allow read: if signedIn() && myEmail() != '' && myEmail() == email;
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow get: if (signedIn() && me() == uid) || isAdmin();
+      allow list: if isAdmin();
+      // Not deletable from the app: deleting it would reset the workspace counter.
+      allow delete: if false;
+      // a small profile only: this is the one document any signed-in stranger can write
+      allow create: if signedIn() && me() == uid && profileOk(request.resource.data)
+        && request.resource.data.get('created', 0) in [0, 1];
+      allow update: if signedIn() && me() == uid && profileOk(request.resource.data)
+        && request.resource.data.get('created', 0) >= resource.data.get('created', 0)
+        && request.resource.data.get('created', 0) <= resource.data.get('created', 0) + 1;
+
+      // Notifications. The sender must be in the workspace and able to see the page (its `anc`), and so must the
+      // recipient; nothing from the page's text is carried. The id is fixed per workspace+page+sender, so a sender
+      // can only ever have one notification per page in your inbox (they refresh it, they cannot pile them up).
+      match /inbox/{id} {
+        allow read, delete: if signedIn() && me() == uid;
+        allow update: if signedIn() && me() == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) && request.resource.data.read is bool;
+        allow create, update: if mentionOk(uid, id, request.resource.data)
+          && (resource == null || resource.data.from == me());
+      }
+    }
+    function memberOf(wid, uid) { return /databases/$(db)/documents/workspaces/$(wid)/members/$(uid); }
+    function mentionOk(to, id, d) {
+      return signedIn() && to != me() && d.from == me()
+        && d.keys().hasOnly(['wid', 'wsName', 'key', 'title', 'from', 'fromName', 'at', 'read', 'anc'])
+        && d.wid is string && d.key is string && d.key.size() <= 200
+        && d.title is string && d.title.size() <= 120 && d.wsName is string && d.wsName.size() <= 80
+        && d.fromName is string && d.fromName.size() <= 80 && d.at is int && d.read == false
+        && d.anc is list && d.anc.size() <= 60
+        && d.key.matches('^[A-Za-z0-9:_-]+$') && id == d.wid + '~' + d.key + '~' + me()
+        && isMember(d.wid) && inScope(d.wid, d)
+        && exists(memberOf(d.wid, to))
+        && (get(memberOf(d.wid, to)).data.get('scopes', []).size() == 0 || d.anc.hasAny(get(memberOf(d.wid, to)).data.get('scopes', [])));
+    }
+
+    match /workspaces/{wid} {
+      allow get: if isMember(wid);
+      allow list: if false;
+      // Any verified account may start workspaces (Job, Personal…), up to the cap, always with itself as the owner.
+      allow create: if signedIn() && request.resource.data.ownerUid == me() && mayCreateWorkspace();
+      allow update: if isOwner(wid) && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow read: if isMember(wid);
+        // You can only ever add yourself: as owner of a workspace whose recorded owner is you (written in the
+        // same batch that creates it), or in exactly the role an existing invite offers your verified email.
+        allow create: if signedIn() && uid == me() && request.resource.data.uid == me() && (
+          (request.resource.data.role == 'owner'
+            && getAfter(/databases/$(db)/documents/workspaces/$(wid)).data.ownerUid == me())
+          || (myEmail() != '' && request.resource.data.role in ['manager', 'operator']
+            && request.resource.data.role == invitedAs(wid)
+            // and exactly the cards the invite offers: nobody widens their own access on the way in
+            && request.resource.data.get('scopes', []) == myInvite(wid).get('scopes', []))
+        );
+        // The owner may change other people's roles, never to owner, never their own.
+        allow update: if isOwner(wid) && uid != me()
+          && request.resource.data.role in ['manager', 'operator'] && request.resource.data.uid == resource.data.uid
+          && scopeList(request.resource.data);
+        // The owner removes others; anyone but the owner may leave.
+        allow delete: if (isOwner(wid) && uid != me()) || (signedIn() && uid == me() && myRole(wid) != 'owner');
+      }
+
+      match /invites/{email} {
+        allow read: if canManage(wid) || (signedIn() && myEmail() != '' && myEmail() == email);
+        allow create: if canManage(wid) && request.resource.data.email == email
+          && request.resource.data.role in ['manager', 'operator']
+          && scopeList(request.resource.data) && withinMine(wid, request.resource.data);
+        allow update: if canManage(wid) && request.resource.data.email == email
+          && request.resource.data.role in ['manager', 'operator']
+          && scopeList(request.resource.data) && withinMine(wid, request.resource.data) && withinMine(wid, resource.data);
+        allow delete: if (canManage(wid) && withinMine(wid, resource.data)) || (signedIn() && myEmail() != '' && myEmail() == email);
+      }
+
+      match /nodes/{id} {
+        // (asking for a card that does not exist tells you only that; the app needs it to merge safely)
+        allow get: if isMember(wid) && (resource == null || inScope(wid, resource.data));
+        allow list: if isMember(wid) && inScope(wid, resource.data);
+        allow create: if canManage(wid) && (unscoped(wid) || nodePlaced(wid, id));
+        allow delete: if canManage(wid) && inScope(wid, resource.data);
+        // The operator rule, the core of the product: an operator may change the STATUS of a task assigned to
+        // them, and nothing else on it, and nothing on anyone else's.
+        allow update: if (canManage(wid) && (unscoped(wid) || (inScope(wid, resource.data) && (
+            (request.resource.data.get('anc', []) == resource.data.get('anc', [])
+              && request.resource.data.get('parentId', '') == resource.data.get('parentId', ''))
+            || nodePlaced(wid, id)))))
+          || (
+          isMember(wid) && inScope(wid, resource.data) && resource.data.assigneeUid == me()
+          // (moving the status stamps when the work actually started and finished, so those two come with it)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'actualStart', 'actualEnd'])
+          && request.resource.data.status in ['backlog', 'doing', 'blocked', 'done']
+          && (!('actualStart' in request.resource.data) || (request.resource.data.actualStart is string && request.resource.data.actualStart.size() == 10))
+          && (!('actualEnd' in request.resource.data) || (request.resource.data.actualEnd is string && request.resource.data.actualEnd.size() == 10))
+        );
+      }
+
+      match /elements/{id} {
+        allow get: if isMember(wid) && (resource == null || inScope(wid, resource.data));
+        allow list: if isMember(wid) && inScope(wid, resource.data);
+        allow create: if canManage(wid) && (unscoped(wid) || elementPlaced(wid));
+        allow update: if canManage(wid) && (unscoped(wid) || (inScope(wid, resource.data) && (
+            (request.resource.data.get('anc', []) == resource.data.get('anc', [])
+              && request.resource.data.scopeId == resource.data.scopeId)
+            || elementPlaced(wid))));
+        allow delete: if canManage(wid) && inScope(wid, resource.data);
+      }
+
+      // The name of the room where pointers and selections are shared. Whoever can read this can see who is on
+      // the board and where, so it is for members only; a manager sets it and replaces it when someone is removed.
+      match /private/{name} {
+        allow read: if isMember(wid);
+        allow create, update: if canManage(wid) && name == 'presence'
+          && request.resource.data.keys().hasOnly(['room'])
+          && request.resource.data.room is string
+          && request.resource.data.room.size() >= 32 && request.resource.data.room.size() <= 64;
+        allow delete: if false;
+      }
+    }
+
+    // Lets a newly signed-in person find invites addressed to their verified email across all workspaces.
+    match /{path=**}/invites/{email} {
+      allow read: if signedIn() && myEmail() != '' && resource.data.email == myEmail();
+    }
+  }
+}

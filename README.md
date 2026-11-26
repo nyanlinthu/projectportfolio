@@ -1,0 +1,117 @@
+# FlowBoard
+
+**A mobile-first, real-time collaborative whiteboard for breaking projects down into work, without losing the picture.**
+
+Cards are the work breakdown (portfolio → project → milestone → task). Around them sits a free-form board of notes,
+tables, pages, checklists, shapes, arrows, ink and kanban boards. Progress rolls up the tree by itself, teammates see
+each other's pointers live, and a person can be confined to just the branch of the project they work on.
+
+**Live:** https://projectportfolio.nyanlinthu.com &nbsp;·&nbsp; [![CI](https://github.com/nyanlinthu/projectportfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/nyanlinthu/projectportfolio/actions/workflows/ci.yml) [![CodeQL](https://github.com/nyanlinthu/projectportfolio/actions/workflows/codeql.yml/badge.svg)](https://github.com/nyanlinthu/projectportfolio/actions/workflows/codeql.yml)
+
+![FlowBoard: the work breakdown as a tree, then the same cards as a board and an Eisenhower matrix](.github/assets/demo.gif)
+
+Designed and built solo by [Nyan Lin Thu](https://nyanlinthu.com) (PMP), using Claude Code as the engineering partner.
+
+---
+
+## What it does
+
+| Area | What a user gets |
+|---|---|
+| **Whiteboard** | Pan/zoom canvas; cards stay exactly where you drop them. Double-tap a card to open a board *inside* it, nested as deep as you like. |
+| **Work breakdown** | The card tree *is* the WBS, and its dates are the schedule. Progress is never typed in: it is derived from the leaves and rolled up. |
+| **Views** | The same cards by status, or by priority as an Eisenhower matrix. One board component draws any axis. |
+| **Tables & pages** | 16 Notion-style property types, `=formulas` with cell references (`PROGRESS()`, `TASKS()`, `DONE()`…). Every row is a page with `@` mentions and backlinks. |
+| **Project plans** | PMBOK knowledge-area templates (risk register with a probability × impact matrix, stakeholders, communications, quality…), generated per project. |
+| **Together** | Live pointers, a coloured ring around what each teammate has selected or is typing in, and @mention notifications. |
+| **Access** | Owner / manager / operator roles. An operator may only move the status of tasks assigned to them. Any member can be scoped to specific cards. |
+| **Search & agent seam** | One index over every card and element. The same operations are exposed as Anthropic tool-use definitions on `window.flowboard`. |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Client["Browser / installed PWA (React 18 + TypeScript, Zustand)"]
+    UI["Whiteboard UI<br/>src/components/board"]
+    KIT["canvas-kit<br/>pan/zoom · drag · lines · roll-up"]
+    LIB["Pure logic<br/>formula · merge · search · scope"]
+    SVC["src/services<br/>(the only code that talks to Firebase)"]
+    UI --> KIT
+    UI --> LIB
+    UI --> SVC
+  end
+  SVC -- "documents, transactional writes" --> FS[("Cloud Firestore<br/>firestore.rules")]
+  SVC -- "pointers & selections" --> RTDB[("Realtime Database<br/>database.rules.json")]
+  SVC -- "Google / email-link sign-in" --> AUTH["Firebase Auth"]
+  SVC -. "App Check (reCAPTCHA Enterprise)" .-> FS
+```
+
+**Why the data is split this way.** Firestore holds everything that must last. Live pointers go to the Realtime
+Database, because sending pointer traffic through Firestore would use up the write quota within minutes. Only
+`src/services/` imports Firebase, so the rest of the app is plain, testable TypeScript.
+
+## The hard parts
+
+- **The rules are the security boundary, not the UI.** The database is reachable directly over the public API,
+  so `firestore.rules` enforces roles, card-level scopes, per-account workspace caps and payload shapes. They are
+  covered by **205 emulator tests** (`npm run test:rules`), which run in CI on every push.
+- **Card-level access without leaks.** Every stored item carries `anc` (its ancestor ids). A scoped person queries
+  `anc array-contains-any scopes`. The rules check that anything new really sits under its claimed parent, so
+  nobody can tag an item into someone else's project.
+- **Concurrent edits.** `src/lib/merge.ts` is a pure three-way merge (per field, per table row/column/card), and
+  writes go through transactions, so two people editing the same card at the same time are merged instead of one
+  overwriting the other.
+- **A formula engine** (`src/lib/formula.ts`) with references that are written by clicking cells while typing.
+- **Progress is derived, never stored.** `canvas-kit/src/rollup.ts` computes weighted progress and at-risk state
+  from the leaves up.
+
+## Run it locally
+
+Requires Node 20+.
+
+```bash
+git clone https://github.com/nyanlinthu/projectportfolio.git && cd projectportfolio
+npm ci
+npm run dev            # no config needed: runs as a single-browser board saved on this device
+```
+
+Checks:
+
+```bash
+npm test               # formula, merge and roll-up unit tests
+npm run typecheck
+npm run test:rules     # 205 security-rules tests (needs Java 17+ for the emulators)
+```
+
+To test sign-in, sharing and presence with no Firebase account, run the local emulators:
+
+```bash
+npx firebase-tools@13 emulators:start --only auth,firestore,database --project demo-flowboard
+VITE_USE_EMULATORS=1 npx vite --port 3001     # in a second terminal
+```
+
+To point it at your own Firebase project, copy `.env.example` to `.env` and fill it in.
+
+## Continuous integration
+
+Every push runs, in parallel: a strict type-check, the unit tests, the security-rules suite against the Firestore
+and Realtime Database emulators, a production build with a bundle-size budget, a full-history secret scan
+(gitleaks), and a production dependency audit. CodeQL scans weekly and on every PR, and Dependabot keeps
+dependencies current.
+
+## Layout
+
+```
+src/components/board   whiteboard, cards, tables, pages, sheets
+src/lib                pure logic (formula, merge, search, scope, views, pmkit), unit-tested
+src/services           Firebase: auth, sync, presence, inbox, admin
+src/ai/tools.ts        agent tool definitions over the same stores the UI uses
+canvas-kit/            the shared canvas engine (also used by other apps of mine)
+firestore.rules        the access boundary, with test/rules.test.mjs
+```
+
+## License
+
+[PolyForm Shield 1.0.0](LICENSE). Free to use, including inside your own team or business. You may not use it to
+offer a product that competes with it, such as reselling or rehosting FlowBoard. This is a source-available
+license, not an OSI open-source license.

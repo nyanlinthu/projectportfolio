@@ -1,0 +1,24 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "presence": {
+      "$room": {
+        ".read": "auth != null && $room.length >= 32 && $room.length <= 64",
+        "$session": {
+          ".write": "auth != null && $room.length >= 32 && $room.length <= 64 && $session.length <= 160 && $session.beginsWith(auth.uid + '_')",
+          ".validate": "newData.hasChildren(['uid', 't']) && newData.child('uid').val() === auth.uid",
+          "uid": { ".validate": "newData.isString()" },
+          "t": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+          "scope": { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "view": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "x": { ".validate": "newData.isNumber()" },
+          "y": { ".validate": "newData.isNumber()" },
+          "sel": { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "edit": { ".validate": "newData.isString() && newData.val().length <= 300" },
+          "$other": { ".validate": false }
+        }
+      }
+    }
+  }
+}
