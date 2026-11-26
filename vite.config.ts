@@ -13,7 +13,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Firebase's reserved paths (/__/auth/handler for the sign-in popup, /__/firebase/init.json) must reach the
+        // network. Without this, the service worker answers the popup with the app itself once auth runs on our domain.
+        navigateFallbackDenylist: [/^\/__\//],
       },
       manifest: {
         name: 'ProjectPortfolio - Project Management',
