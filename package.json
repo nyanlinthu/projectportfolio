@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "deploy": "firebase deploy",
     "test": "for t in test/formula test/merge canvas-kit/test/rollup; do esbuild $t.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/$(basename $t).test.mjs --log-level=error && node node_modules/.cache/$(basename $t).test.mjs || exit 1; done",
-    "test:rules": "npx --yes firebase-tools@13 emulators:exec --only firestore,database --project demo-flowboard \"node test/rules.test.mjs\"",
+    "test:rules": "npx --yes firebase-tools@13 emulators:exec --only firestore,database --project demo-projectportfolio \"node test/rules.test.mjs\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

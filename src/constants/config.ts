@@ -40,9 +40,9 @@ export const ROUTES = {
 } as const
 
 export const STORAGE_KEYS = {
-  USER_PREFERENCES: 'flowboard_user_preferences',
-  CANVAS_STATE: 'flowboard_canvas_state',
-  RECENT_PROJECTS: 'flowboard_recent_projects'
+  USER_PREFERENCES: 'projectportfolio_user_preferences',
+  CANVAS_STATE: 'projectportfolio_canvas_state',
+  RECENT_PROJECTS: 'projectportfolio_recent_projects'
 } as const
 
 export const NODE_TYPES = {

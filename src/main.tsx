@@ -1,3 +1,4 @@
+import './migrateStorage'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
@@ -13,8 +14,8 @@ if (import.meta.env.DEV && 'serviceWorker' in navigator) {
   void navigator.serviceWorker.getRegistrations().then(async (regs) => {
     if (!regs.length) return
     await Promise.all(regs.map((r) => r.unregister()))
-    if (navigator.serviceWorker.controller && !sessionStorage.getItem('flowboard-sw-cleared')) {
-      sessionStorage.setItem('flowboard-sw-cleared', '1')
+    if (navigator.serviceWorker.controller && !sessionStorage.getItem('projectportfolio-sw-cleared')) {
+      sessionStorage.setItem('projectportfolio-sw-cleared', '1')
       window.location.reload()
     }
   })
