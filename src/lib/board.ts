@@ -168,7 +168,9 @@ export function tidyPositions(root: BoardNode, kids: ChildMap, wrap = Infinity):
     // reading order when they will be (or already are) a grid, so tidying twice changes nothing; else left to right
     const top = Math.min(...all.map((c) => c.y))
     const rowOf = (c: BoardNode): number => (grid ? Math.round((c.y - top) / ROW_H) : 0)
-    const cs = [...all].sort((a, b) => rowOf(a) - rowOf(b) || byDate(kids)(a, b) || a.x - b.x || a.createdAt - b.createdAt)
+    // when every card has a date the order is purely chronological (their old row no longer matters); otherwise the old reading order
+    const dated = all.length > 0 && all.every((c) => dateKey(c, kids))
+    const cs = [...all].sort((a, b) => (dated ? 0 : rowOf(a) - rowOf(b)) || byDate(kids)(a, b) || rowOf(a) - rowOf(b) || a.x - b.x || a.createdAt - b.createdAt)
     let x: number
     if (grid) {
       cs.forEach((c, i) => { out[c.id] = { x: cursor + (i % wrap) * SLOT_W, y: y + LEVEL_H + Math.floor(i / wrap) * ROW_H } })
