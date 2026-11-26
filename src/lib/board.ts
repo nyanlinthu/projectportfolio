@@ -41,6 +41,19 @@ export const todayYmd = (): string => {
 }
 
 export type ChildMap = Map<string, BoardNode[]>
+/** When a card sits on the timeline: its own planned/actual start, else the earliest date found under it. */
+export function dateKey(n: BoardNode, kids: ChildMap, depth = 0): string | undefined {
+  const own = n.start ?? n.end ?? n.actualStart ?? n.actualEnd
+  if (own) return own
+  if (depth > 20) return undefined
+  const found = (kids.get(n.id) ?? []).map((c) => dateKey(c, kids, depth + 1)).filter(Boolean) as string[]
+  return found.sort()[0]
+}
+/** Left = oldest, right = newest. Cards without any date are left to the other tie-breakers (position, then creation). */
+export const byDate = (kids: ChildMap) => (a: BoardNode, b: BoardNode): number => {
+  const da = dateKey(a, kids), db = dateKey(b, kids)
+  return da && db && da !== db ? (da < db ? -1 : 1) : 0
+}
 export function childMap(nodes: Record<string, BoardNode>): ChildMap {
   const m: ChildMap = new Map()
   for (const n of Object.values(nodes)) if (n.parentId) m.set(n.parentId, [...(m.get(n.parentId) ?? []), n])
@@ -155,7 +168,7 @@ export function tidyPositions(root: BoardNode, kids: ChildMap, wrap = Infinity):
     // reading order when they will be (or already are) a grid, so tidying twice changes nothing; else left to right
     const top = Math.min(...all.map((c) => c.y))
     const rowOf = (c: BoardNode): number => (grid ? Math.round((c.y - top) / ROW_H) : 0)
-    const cs = [...all].sort((a, b) => rowOf(a) - rowOf(b) || a.x - b.x || a.createdAt - b.createdAt)
+    const cs = [...all].sort((a, b) => rowOf(a) - rowOf(b) || byDate(kids)(a, b) || a.x - b.x || a.createdAt - b.createdAt)
     let x: number
     if (grid) {
       cs.forEach((c, i) => { out[c.id] = { x: cursor + (i % wrap) * SLOT_W, y: y + LEVEL_H + Math.floor(i / wrap) * ROW_H } })
