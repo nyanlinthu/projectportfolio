@@ -42,7 +42,7 @@ become significant, I may charge for the hosted version to cover them. The code 
 | **Project plans** | PMBOK knowledge-area templates (risk register with a probability × impact matrix, stakeholders, communications, quality…), generated per project. |
 | **Together** | Live pointers, a coloured ring around what each teammate has selected or is typing in, and @mention notifications. |
 | **Access** | Owner / manager / operator roles. An operator may only move the status of tasks assigned to them. Any member can be scoped to specific cards. |
-| **Search & agent seam** | One index over every card and element. The same operations are exposed as Anthropic tool-use definitions on `window.flowboard`. |
+| **Search & agent seam** | One index over every card and element. The same operations are exposed as Anthropic tool-use definitions on `window.projectportfolio`. |
 
 ## Architecture
 
@@ -103,7 +103,7 @@ npm run test:rules     # 205 security-rules tests (needs Java 17+ for the emulat
 To test sign-in, sharing and presence with no Firebase account, run the local emulators:
 
 ```bash
-npx firebase-tools@13 emulators:start --only auth,firestore,database --project demo-flowboard
+npx firebase-tools@13 emulators:start --only auth,firestore,database --project demo-projectportfolio
 VITE_USE_EMULATORS=1 npx vite --port 3001     # in a second terminal
 ```
 

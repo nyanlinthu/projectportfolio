@@ -20,9 +20,9 @@ import { auth, cloudEnabled, db, usingEmulators } from './firebase'
 // who-is-here), so the rest of the app never imports the SDK and a different backend could replace it later. What a signed-in person may read or write is decided by
 // firestore.rules on the server; nothing here is a security control.
 
-const LAST_WS = 'flowboard-workspace'
-const IMPORTED = 'flowboard-imported'
-const BACKED_UP = 'flowboard-backed-up'
+const LAST_WS = 'projectportfolio-workspace'
+const IMPORTED = 'projectportfolio-imported'
+const BACKED_UP = 'projectportfolio-backed-up'
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b)
 const fdb = (): NonNullable<typeof db> => { if (!db) throw new Error('Cloud is not configured'); return db }
 
@@ -38,7 +38,7 @@ export async function signIn(): Promise<void> {
 }
 // Email sign-up: we email a one-time link. Opening it is both the proof that the address is real and the sign-in,
 // so an unverified account never exists. Google accounts are verified by Google and skip this.
-const LINK_EMAIL = 'flowboard-link-email'
+const LINK_EMAIL = 'projectportfolio-link-email'
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export async function sendEmailLink(email: string): Promise<boolean> {
   if (!auth) return false
@@ -239,7 +239,7 @@ async function startSync(wid: string, uid: string, role: Role, scopes: string[],
   // Before the cloud copy ever replaces what is in this browser, keep the browser-only board aside once.
   if (!localStorage.getItem(BACKED_UP)) {
     try {
-      for (const k of ['flowboard-board-v1', 'flowboard-elements-v1']) { const v = localStorage.getItem(k); if (v) localStorage.setItem(`${k}.before-cloud`, v) }
+      for (const k of ['projectportfolio-board-v1', 'projectportfolio-elements-v1']) { const v = localStorage.getItem(k); if (v) localStorage.setItem(`${k}.before-cloud`, v) }
     } catch { /* storage full: the import below still carries the board up */ }
     localStorage.setItem(BACKED_UP, '1')
   }

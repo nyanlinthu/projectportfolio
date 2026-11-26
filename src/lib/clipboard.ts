@@ -8,7 +8,7 @@ import { BoardElement, BoardNode } from '@/types'
  * Copy / paste of things on the board. A copy travels on the real clipboard under its own type (so it works
  * between tabs and workspaces) with the title as plain text beside it (so pasting into any other app gives words).
  */
-export const CLIP_TYPE = 'application/x-flowboard'
+export const CLIP_TYPE = 'application/x-projectportfolio'
 type Clip = { kind: 'element'; el: BoardElement } | { kind: 'nodes'; rootId: string; nodes: BoardNode[] }
 
 const rid = (p: string): string => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)

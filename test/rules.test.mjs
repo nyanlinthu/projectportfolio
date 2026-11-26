@@ -7,7 +7,7 @@ import { collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, query, se
 
 setLogLevel('silent') // expected denials are noisy otherwise
 
-const env = await initializeTestEnvironment({ projectId: 'demo-flowboard', firestore: { rules: readFileSync('firestore.rules', 'utf8') }, database: { rules: readFileSync('database.rules.json', 'utf8') } })
+const env = await initializeTestEnvironment({ projectId: 'demo-projectportfolio', firestore: { rules: readFileSync('firestore.rules', 'utf8') }, database: { rules: readFileSync('database.rules.json', 'utf8') } })
 // the project owner has approved this one address to start a workspace
 await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'creators', 'owner@example.com'), { addedAt: 1 }))
 const as = (uid, email, verified = true) => env.authenticatedContext(uid, { email, email_verified: verified }).firestore()

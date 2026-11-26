@@ -19,7 +19,7 @@ export const usingEmulators = import.meta.env.DEV && import.meta.env.VITE_USE_EM
 /** Without a project configured the app runs as a single-browser board with no sign-in. */
 export const cloudEnabled = usingEmulators || (!!config.apiKey && !!config.projectId)
 
-export const app: FirebaseApp | null = cloudEnabled ? initializeApp(usingEmulators ? { apiKey: 'demo', projectId: 'demo-flowboard', authDomain: 'localhost' } : config) : null
+export const app: FirebaseApp | null = cloudEnabled ? initializeApp(usingEmulators ? { apiKey: 'demo', projectId: 'demo-projectportfolio', authDomain: 'localhost' } : config) : null
 // App Check: every request carries proof it came from this app on a real browser (reCAPTCHA Enterprise,
 // invisible), so a script holding the public config can't hammer the database. Site key is public by design.
 // Created before any other service so their first requests already carry a token.
