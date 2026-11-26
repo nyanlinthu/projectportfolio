@@ -231,7 +231,10 @@ export const BRANCH_W = 250 // a little wider than a slot, so neighbouring + and
  * down. `depth` is how far the cards under the parent's row must move to make room.
  */
 function placeBranch(e: BoardNode, at: { x: number; y: number }, kids: ChildMap, wrap: number): { pos: Record<string, { x: number; y: number }>; depth: number } {
-  const cs = [...(kids.get(e.id) ?? [])].sort((a, b) => a.y - b.y || a.x - b.x || a.createdAt - b.createdAt)
+  // oldest on the left, newest on the right when every sibling has a date; otherwise the order the user placed them in
+  const all = kids.get(e.id) ?? []
+  const dated = all.length > 0 && all.every((c) => dateKey(c, kids))
+  const cs = [...all].sort((a, b) => (dated ? byDate(kids)(a, b) : 0) || a.y - b.y || a.x - b.x || a.createdAt - b.createdAt)
   const pos: Record<string, { x: number; y: number }> = {}
   const cols = Math.min(cs.length, wrap)
   cs.forEach((c, i) => { pos[c.id] = { x: at.x + ((i % wrap) - (cols - 1) / 2) * BRANCH_W, y: at.y + LEVEL_H + 30 + Math.floor(i / wrap) * ROW_H } })
