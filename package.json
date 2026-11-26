@@ -1,7 +1,7 @@
 {
   "name": "projectportfolio",
   "version": "1.0.0",
-  "description": "FlowBoard: a mobile-first, real-time collaborative work-breakdown whiteboard (React + Firebase)",
+  "description": "ProjectPortfolio: a mobile-first, real-time collaborative work-breakdown whiteboard (React + Firebase)",
   "type": "module",
   "scripts": {
     "dev": "vite",

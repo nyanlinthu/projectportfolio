@@ -1,5 +1,5 @@
 export const APP_CONFIG = {
-  NAME: 'FlowBoard',
+  NAME: 'ProjectPortfolio',
   DESCRIPTION: 'Mobile-first Work Breakdown Structure PWA',
   VERSION: '1.0.0',
   

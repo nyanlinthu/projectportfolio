@@ -16,8 +16,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       },
       manifest: {
-        name: 'FlowBoard - Project Management',
-        short_name: 'FlowBoard',
+        name: 'ProjectPortfolio - Project Management',
+        short_name: 'ProjectPortfolio',
         description: 'Portfolio work breakdown on a free-form whiteboard',
         theme_color: '#16294E',
         background_color: '#16294E',

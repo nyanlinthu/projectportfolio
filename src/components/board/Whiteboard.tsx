@@ -917,7 +917,7 @@ export default function Whiteboard(): JSX.Element {
     <LinkProvider nodes={nodes} elements={elements} goTo={stableGoTo}>
     <div className="wb">
       <header className="wb-top">
-        <button className={`wb-brand ${inside ? 'is-inside' : ''}`} onClick={() => openNode(ROOT_ID)} aria-label="Home" title="Home">FlowBoard</button>
+        <button className={`wb-brand ${inside ? 'is-inside' : ''}`} onClick={() => openNode(ROOT_ID)} aria-label="Home" title="Home">ProjectPortfolio</button>
         {inside && (
           <>
             <button className="wb-back" onClick={goUp} aria-label="Back" title="Back">‹</button>

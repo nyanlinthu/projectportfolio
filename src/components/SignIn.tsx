@@ -19,7 +19,7 @@ export default function SignIn(): JSX.Element {
   if (fromLink) {
     return (
       <main className="wb-gate"><div className="wb-gate-card">
-        <div className="wb-kicker"><span>FlowBoard</span></div>
+        <div className="wb-kicker"><span>ProjectPortfolio</span></div>
         <h1>Confirm your email</h1>
         <p>{busy ? 'Signing you in…' : 'You opened the link on a different browser or app. Type the address it was sent to.'}</p>
         {!busy && (
@@ -37,7 +37,7 @@ export default function SignIn(): JSX.Element {
   return (
     <main className="wb-gate">
       <div className="wb-gate-card">
-        <div className="wb-kicker"><span>FlowBoard</span></div>
+        <div className="wb-kicker"><span>ProjectPortfolio</span></div>
         <h1>Portfolio work, from the task up.</h1>
         <p>Projects, milestones and tasks on one board. Progress rolls up from the work people actually finish.</p>
         <button className="wb-gate-btn" onClick={() => void signIn()}>Continue with Google</button>
@@ -67,5 +67,5 @@ export default function SignIn(): JSX.Element {
 }
 
 export function Splash({ text }: { text: string }): JSX.Element {
-  return <main className="wb-gate"><div className="wb-gate-card"><div className="wb-kicker"><span>FlowBoard</span></div><p>{text}</p></div></main>
+  return <main className="wb-gate"><div className="wb-gate-card"><div className="wb-kicker"><span>ProjectPortfolio</span></div><p>{text}</p></div></main>
 }

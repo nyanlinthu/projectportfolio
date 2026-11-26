@@ -15,7 +15,7 @@ export default function App(): JSX.Element {
   if (status === 'error') {
     return (
       <main className="wb-gate"><div className="wb-gate-card">
-        <div className="wb-kicker"><span>FlowBoard</span></div>
+        <div className="wb-kicker"><span>ProjectPortfolio</span></div>
         <p role="alert">{error ?? 'Something went wrong.'}</p>
         <button className="wb-gate-btn" onClick={() => window.location.reload()}>Try again</button>
         <button className="wb-del" onClick={() => void signOut()}>Sign out</button>

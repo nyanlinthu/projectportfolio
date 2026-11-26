@@ -1,4 +1,4 @@
-# FlowBoard
+# ProjectPortfolio
 
 **A mobile-first, real-time collaborative whiteboard for breaking projects down into work, without losing the picture.**
 
@@ -8,9 +8,26 @@ each other's pointers live, and a person can be confined to just the branch of t
 
 **Live:** https://projectportfolio.nyanlinthu.com &nbsp;·&nbsp; [![CI](https://github.com/nyanlinthu/projectportfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/nyanlinthu/projectportfolio/actions/workflows/ci.yml) [![CodeQL](https://github.com/nyanlinthu/projectportfolio/actions/workflows/codeql.yml/badge.svg)](https://github.com/nyanlinthu/projectportfolio/actions/workflows/codeql.yml)
 
-![FlowBoard: the work breakdown as a tree, then the same cards as a board and an Eisenhower matrix](.github/assets/demo.gif)
+![ProjectPortfolio: the work breakdown as a tree, then the same cards as a board and an Eisenhower matrix](.github/assets/demo.gif)
 
 Designed and built solo by [Nyan Lin Thu](https://nyanlinthu.com) (PMP), using Claude Code as the engineering partner.
+
+## Why I built this
+
+I'm a project manager. Every project has a work breakdown structure, but in practice the WBS only exists in the
+project manager's head. No tool shows it the way we picture it.
+
+- **Notion** templates solve most of the planning, but there's no real whiteboard: you can't lay the work out and see it.
+- **Microsoft Project** is excellent for the plan, but the operations people doing the work can't realistically
+  update it, so their progress never rolls up into the project's status.
+
+ProjectPortfolio is the tool I wanted: the WBS as something you can see and arrange, where the person doing a task
+taps its status on their phone and the milestone, project and portfolio above it update by themselves.
+
+I'm giving it back to the project-management community, for anyone with the same problem to use with their team.
+Clone it and run it yourself, or use the hosted version at
+[projectportfolio.nyanlinthu.com](https://projectportfolio.nyanlinthu.com), which is free. If its running costs ever
+become significant, I may charge for the hosted version to cover them. The code stays free to use under the license below.
 
 ---
 
@@ -113,5 +130,5 @@ firestore.rules        the access boundary, with test/rules.test.mjs
 ## License
 
 [PolyForm Shield 1.0.0](LICENSE). Free to use, including inside your own team or business. You may not use it to
-offer a product that competes with it, such as reselling or rehosting FlowBoard. This is a source-available
+offer a product that competes with it, such as reselling or rehosting ProjectPortfolio. This is a source-available
 license, not an OSI open-source license.

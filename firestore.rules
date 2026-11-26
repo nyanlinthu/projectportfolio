@@ -1,5 +1,5 @@
 rules_version = '2';
-// FlowBoard access rules. The database is reachable directly over the public API, so these rules — not the UI —
+// ProjectPortfolio access rules. The database is reachable directly over the public API, so these rules — not the UI —
 // are the boundary. Tested by test/rules.test.mjs (npm run test:rules) and probed live after every deploy.
 //
 // Model:  workspaces/{wid}                      name, ownerUid
