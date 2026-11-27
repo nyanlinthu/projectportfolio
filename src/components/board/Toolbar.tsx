@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { Fragment, useRef } from 'react'
 import { Eraser, FileText, Image as ImageIcon, Kanban, LayoutPanelTop, ListChecks, MousePointer2, MoveUpRight, Pencil, Rows3, Shapes, StickyNote, Table2, Trash2, Type } from 'lucide-react'
 import { Tool } from '@/types'
 
@@ -38,10 +38,13 @@ export default function Toolbar({ tool, onTool, onImage, context, canDelete, onD
       {context && <div className="wb-context">{context}</div>}
       <div className="wb-tools" role="toolbar" aria-label="Whiteboard tools">
         {TOOLS.map(({ id, label, Icon }) => (
-          <button key={id} title={label} aria-label={label} aria-pressed={tool === id} className={tool === id ? 'is-on' : ''}
-            onClick={() => onTool(tool === id ? 'select' : id)}><Icon size={20} /></button>
+          <Fragment key={id}>
+            <button title={label} aria-label={label} aria-pressed={tool === id} className={tool === id ? 'is-on' : ''}
+              onClick={() => onTool(tool === id ? 'select' : id)}><Icon size={20} /></button>
+            {/* swimlanes sit right after the select arrow */}
+            {id === 'select' && onLanes && <button title="Swimlanes: group the cards into lanes" aria-label="Swimlanes" aria-pressed={!!lanesOn} className={lanesOn ? 'is-on' : ''} onClick={onLanes}><Rows3 size={20} /></button>}
+          </Fragment>
         ))}
-        {onLanes && <button title="Swimlanes: group the cards into lanes" aria-label="Swimlanes" aria-pressed={!!lanesOn} className={lanesOn ? 'is-on' : ''} onClick={onLanes}><Rows3 size={20} /></button>}
         <button title="Add an image (or just paste one)" aria-label="Add an image" onClick={() => file.current?.click()}><ImageIcon size={20} /></button>
         <input ref={file} type="file" accept="image/*" hidden
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onImage(f); e.target.value = '' }} />

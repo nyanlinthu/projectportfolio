@@ -187,10 +187,11 @@ export default function Whiteboard(): JSX.Element {
   // where each card is drawn: stored placement plus the room opened branches make (lib/board.ts displayLayout)
   // Swimlanes (the toolbar's lanes button): the open card's children grouped into lanes, as rows or as columns.
   // Remembered on this device; each card's own `lane` and its parent's `lanes` / `laneDir` are what is shared.
-  // On unless switched off. The lane bar shows whenever it is on, so lanes can be added at any level; the cards are only
-  // arranged into bands once the open card has lanes (or a child names one). Remembered on this device.
-  const [lanesOn, setLanesOn] = useState(() => { try { return localStorage.getItem(`${STORE_KEYS.view}-lanes-v2`) !== '0' } catch { return true } })
-  const toggleLanes = useCallback(() => setLanesOn((v) => { const n = !v; try { localStorage.setItem(`${STORE_KEYS.view}-lanes-v2`, n ? '1' : '0') } catch { /* private mode */ } return n }), [])
+  // Always on when the page loads. Done / the toolbar button turn it off for this visit only: it is not remembered, so a
+  // refresh brings it back. The lane bar shows whenever it is on (lanes can be added at any level); the cards are only
+  // arranged into bands once the open card has lanes (or a child names one).
+  const [lanesOn, setLanesOn] = useState(true)
+  const toggleLanes = useCallback(() => setLanesOn((v) => !v), [])
   const laneDir: LaneDir = focus.laneDir === 'cols' ? 'cols' : 'rows'
   const laneBar = lanesOn && !page && viewMode === 'tree'
   const hasLanes = (focus.lanes?.length ?? 0) > 0 || (board.kids.get(focus.id) ?? []).some((c) => !!c.lane)

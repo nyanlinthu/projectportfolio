@@ -44,11 +44,30 @@ become significant, I may charge for the hosted version to cover them. The code 
 | **Whiteboard** | Pan/zoom canvas; cards stay exactly where you drop them. Double-tap a card to open a board *inside* it, nested as deep as you like. |
 | **Work breakdown** | The card tree *is* the WBS, and its dates are the schedule. Progress is never typed in: it is derived from the leaves and rolled up. |
 | **Views** | The same cards by status, or by priority as an Eisenhower matrix. One board component draws any axis. |
+| **Swimlanes** | Group any card's children into lanes (rows or columns), and draw process flows on swimlane boards you place yourself. See below. |
 | **Tables & pages** | 16 Notion-style property types, `=formulas` with cell references (`PROGRESS()`, `TASKS()`, `DONE()`…). Every row is a page with `@` mentions and backlinks. |
 | **Project plans** | PMBOK knowledge-area templates (risk register with a probability × impact matrix, stakeholders, communications, quality…), generated per project. |
 | **Together** | Live pointers, a coloured ring around what each teammate has selected or is typing in, and @mention notifications. |
 | **Access** | Owner / manager / operator roles. An operator may only move the status of tasks assigned to them. Any member can be scoped to specific cards. |
 | **Search & agent seam** | One index over every card and element. The same operations are exposed as Anthropic tool-use definitions on `window.projectportfolio`. |
+
+### Swimlanes
+
+![Swimlanes: cards snap into lanes, the lanes flip between rows and columns, and a swimlane board carries what is on it](.github/assets/swimlanes.gif)
+
+Two things share the name, and they are separate on purpose:
+
+- **Lanes for your cards.** Under any open card (the portfolio, a project, a milestone), the children can sit in lanes:
+  Esports and Corporate, or companies, departments and entities under a group. They run as horizontal bands or vertical
+  columns. Drag a card into a lane and it snaps into place. Add, rename, reorder and remove lanes from the bar above the
+  tools (removing a lane never deletes a card: they fall back to Unsorted). Lanes are on whenever the page loads; the
+  Swimlanes button, second in the bottom toolbar, turns them off for that visit. Dated cards line up oldest to newest.
+- **Swimlane boards you place.** A frame of lanes for drawing a process flow by department or team. Drop sticky notes,
+  checklists, shapes and arrows on it; they travel with the board while you drag it, and deleting the board deletes
+  what is on it. Drag the lines between lanes to resize them, and flip it between horizontal and vertical.
+
+Lane membership is only a `lane` label on each card, and the bands are drawn from it, so progress roll-up and access
+rules are untouched.
 
 ## Architecture
 
