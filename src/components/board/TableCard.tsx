@@ -1,3 +1,4 @@
+import { useEscape } from '@/hooks/useEscape'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { closeBrackets, colLetter, display, FormulaError, FUNCTION_HELP, functionAtCaret, ImageValue, wantsReference } from '@/lib/formula'
 import { COLUMN_TYPES, computeTable, hasOptions, isFormula, isTyped, newOption, OPTION_COLORS, tableOps, typeInfo } from '@/lib/table'
@@ -24,11 +25,10 @@ function PropertyMenu({ table, col, onClose }: { table: TableEl; col: TableColum
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const away = (e: PointerEvent): void => { if (box.current && !box.current.contains(e.target as Node)) onClose() }
-    const esc = (e: KeyboardEvent): void => { if (e.key === 'Escape') onClose() }
     document.addEventListener('pointerdown', away, true)
-    window.addEventListener('keydown', esc)
-    return () => { document.removeEventListener('pointerdown', away, true); window.removeEventListener('keydown', esc) }
+    return () => document.removeEventListener('pointerdown', away, true)
   }, [onClose])
+  useEscape(onClose)
   const options = col.options ?? []
   const setOptions = (next: typeof options): void => tableOps.patchColumn(table.id, col.id, { options: next })
   return (

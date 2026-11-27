@@ -1,3 +1,4 @@
+import { useEscape } from '@/hooks/useEscape'
 import { useEffect, useState } from 'react'
 import { openWorkspace } from '@/services/cloud'
 import { dismiss, InboxItem, markOneRead, markRead, watchInbox } from '@/services/inbox'
@@ -42,11 +43,7 @@ export async function goToMention(n: InboxItem): Promise<void> {
 export default function InboxSheet({ items, onClose }: { items: InboxItem[]; onClose: () => void }): JSX.Element {
   const uid = useSession((s) => s.user?.uid ?? '')
   const unread = items.filter((i) => !i.read)
-  useEffect(() => {
-    const k = (e: KeyboardEvent): void => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [onClose])
+  useEscape(onClose)
   return (
     <aside className="wb-sheet" aria-label="Notifications">
       <PeerMark id="inbox" />

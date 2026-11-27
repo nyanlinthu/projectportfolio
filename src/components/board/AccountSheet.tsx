@@ -1,3 +1,4 @@
+import { useEscape } from '@/hooks/useEscape'
 import { useEffect, useState } from 'react'
 import { cancelInvite, createWorkspace, inviteMember, openWorkspace, removeMember, renameWorkspace, setMemberRole, setMemberScopes, signOut } from '@/services/cloud'
 import { useBoardStore } from '@/store/useBoardStore'
@@ -27,11 +28,7 @@ export default function AccountSheet({ onClose, onAdmin }: { onClose: () => void
   const mine = myScopes(s)
   useEffect(() => { setInviteScopes([]) }, [ws?.id])
   useEffect(() => { setName(ws?.name ?? '') }, [ws?.id, ws?.name])
-  useEffect(() => {
-    const k = (e: KeyboardEvent): void => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [onClose])
+  useEscape(onClose)
   if (!s.user || !ws) return null
   const manage = role !== 'operator'
 

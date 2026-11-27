@@ -1,3 +1,4 @@
+import { useEscape } from '@/hooks/useEscape'
 import { useEffect, useMemo, useState } from 'react'
 import { listUsers, UserRow } from '@/services/admin'
 import { PeerMark } from './Presence'
@@ -33,11 +34,7 @@ export default function AdminSheet({ onClose }: { onClose: () => void }): JSX.El
   const [open, setOpen] = useState<string | null>(null)
   const load = (): void => { setErr(null); listUsers().then(setUsers).catch((e) => setErr((e as { code?: string }).code === 'permission-denied' ? 'This account is not an admin.' : 'Could not load users.')) }
   useEffect(load, [])
-  useEffect(() => {
-    const k = (e: KeyboardEvent): void => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [onClose])
+  useEscape(onClose)
 
   const stats = useMemo(() => {
     if (!users) return null

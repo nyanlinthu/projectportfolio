@@ -1,3 +1,4 @@
+import { useEscape } from '@/hooks/useEscape'
 import { useMemo, useState } from 'react'
 import { ChecklistEditor } from 'canvas-kit'
 import { addPlan, addStarterKit, isStarted, Plan, plansOf, STARTER, templateOf, TEMPLATES } from '@/lib/pmkit'
@@ -31,11 +32,11 @@ export default function PlansSheet({ project, canEdit, openId, onOpenRow, onClos
   const doc = plans.find((p) => p.id === open)
   const missing = TEMPLATES.filter((t) => !plans.some((p) => p.kit === t.id))
   const started = plans.filter(isStarted).length
+  useEscape(() => { if (doc) setOpen(null); else onClose() })
 
   return (
     <div className="wb-plans-backdrop" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <section className="wb-plans" role="dialog" aria-label={`Plans for ${project.title}`}
-        onKeyDown={(e) => { if (e.key === 'Escape' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) { e.stopPropagation(); doc ? setOpen(null) : onClose() } }}>
+      <section className="wb-plans" role="dialog" aria-label={`Plans for ${project.title}`}>
         <header className="wb-plans-head">
           {doc ? <button className="wb-x" onClick={() => setOpen(null)} aria-label="Back to all plans">‹</button> : null}
           <div className="wb-plans-titles">

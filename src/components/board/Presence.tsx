@@ -1,3 +1,4 @@
+import { useEscape } from '@/hooks/useEscape'
 import { useEffect, useRef, useState } from 'react'
 import { Person, usePresence } from '@/store/usePresence'
 
@@ -46,11 +47,10 @@ export function PresenceBar({ placeOf, onGoTo }: BarProps): JSX.Element | null {
   useEffect(() => {
     if (!open) return
     const away = (e: PointerEvent): void => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false) }
-    const esc = (e: KeyboardEvent): void => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('pointerdown', away, true)
-    window.addEventListener('keydown', esc)
-    return () => { document.removeEventListener('pointerdown', away, true); window.removeEventListener('keydown', esc) }
+    return () => document.removeEventListener('pointerdown', away, true)
   }, [open])
+  useEscape(() => setOpen(false), open)
   if (!people.length) return null
   return (
     <div ref={box} className="wb-peers">

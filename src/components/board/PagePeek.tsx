@@ -1,3 +1,4 @@
+import { useEscape } from '@/hooks/useEscape'
 import { useMemo, useRef, useState } from 'react'
 import { PERSON, useMention } from './Mention'
 import { AutosizeTextarea } from 'canvas-kit'
@@ -128,6 +129,7 @@ function PagePeek({ overlay, onBoard, kicker, title, onTitle, properties, body, 
 
 /** A new page sits over a dimmed board (tap outside to finish); an existing one docks beside its board. */
 function Wrap({ overlay, onClose, children }: { overlay?: boolean; onClose: () => void; children: React.ReactNode }): JSX.Element {
+  useEscape(onClose)
   if (!overlay) return <>{children}</>
   return <div className="wb-peek-back" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose() }}>{children}</div>
 }

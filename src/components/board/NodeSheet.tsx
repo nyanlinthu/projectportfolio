@@ -1,3 +1,4 @@
+import { useEscape } from '@/hooks/useEscape'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { KIND_LABEL, NodeView, PRIORITIES, STATUSES } from '@/lib/board'
 import { ROOT_ID, useBoardStore } from '@/store/useBoardStore'
@@ -89,12 +90,7 @@ export default function NodeSheet({ node, view, path, operators, lateDays, onClo
     a.onfinish = () => onClose()
   }, [node.id, onClose, reduced, docked])
 
-  useEffect(() => {
-    if (docked) return
-    const k = (e: KeyboardEvent): void => { if (e.key === 'Escape') close() }
-    window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [close, docked])
+  useEscape(close, !docked)
 
   const els = useElementStore((s) => s.elements)
   const notesAt = useMention({ text: node.notes ?? '', links: node.noteLinks ?? [], selfKey: node.id,
