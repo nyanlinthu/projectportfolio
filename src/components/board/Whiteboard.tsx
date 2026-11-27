@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { CANVAS_DRAG_EVENT, ConnectionLines, DrawLayer, MobileCanvas } from 'canvas-kit'
 import type { CanvasHandle } from 'canvas-kit'
 import { applyLaneEdit, BRANCH_W, childKind, childMap, compactChildren, deriveBoard, displayLayout, KIND_LABEL, LaneDir, LaneEdit, laneAt, laneLayout, laneNames, UNSORTED, nextChildSpot, nextStatus, PEN_COLORS, STICKY_COLORS, tidyPositions, wrapFor } from '@/lib/board'
@@ -191,7 +191,32 @@ export default function Whiteboard(): JSX.Element {
   const laneDir: LaneDir = focus.laneDir === 'cols' ? 'cols' : 'rows'
   const laneMode = lanesOn && !page && viewMode === 'tree'
   const laneModeRef = useRef(laneMode); laneModeRef.current = laneMode
-  const lanes = useMemo(() => (laneMode ? laneLayout(focus, board.kids, wrap, laneDir) : null), [laneMode, focus, board, wrap, laneDir])
+  // real card heights (title length varies), so a lane ends just below its tallest card's chips
+  const [heights, setHeights] = useState<Record<string, number>>({})
+  useLayoutEffect(() => {
+    if (!laneMode) return
+    const next: Record<string, number> = {}
+    let changed = false
+    for (const c of board.kids.get(focus.id) ?? []) {
+      const el = document.querySelector<HTMLElement>(`.wb-node[data-canvas-id="${CSS.escape(c.id)}"]`)
+      if (!el) continue
+      const h = el.offsetHeight + 22 // the + and ▸ chips hang below the card
+      next[c.id] = h
+      if (Math.abs((heights[c.id] ?? 0) - h) > 2) changed = true
+    }
+    if (changed) setHeights((prev) => ({ ...prev, ...next }))
+  })
+  // a card being named is part of the layout too (it starts in Unsorted), so the lane it lands in grows to hold it
+  const lanes = useMemo(() => {
+    if (!laneMode) return null
+    let kids = board.kids
+    if (editor && visible.has(editor.parentId)) {
+      kids = new Map(board.kids)
+      const ghost = { id: NEW_CARD_ID, parentId: editor.parentId, kind: editor.kind, title: '', x: editor.sx ?? editor.x, y: 1e9, weight: 1, after: [], createdAt: Number.MAX_SAFE_INTEGER, updatedAt: 0 } as BoardNode
+      kids.set(editor.parentId, [...(board.kids.get(editor.parentId) ?? []), ghost])
+    }
+    return laneLayout(focus, kids, wrap, laneDir, heights)
+  }, [laneMode, focus, board, wrap, laneDir, editor, visible, heights])
   const disp = useMemo(() => lanes?.pos ?? displayLayout(focus, board.kids, wrap), [lanes, focus, board, wrap])
   const dispRef = useRef(disp)
   // Unfolded cards: each one (and the branch it shows) gets its own colour; everything else dims back a little.
@@ -245,11 +270,11 @@ export default function Whiteboard(): JSX.Element {
   const editorParent = editor && visible.has(editor.parentId) ? editor.parentId : null
   const connections = useMemo(() => [
     // Inside a task, everything on the board is already under it: no line from the task to each sub-task.
-    ...list.filter((n) => n.parentId && visible.has(n.parentId) && !(focus.kind === 'task' && n.parentId === focus.id) && !(laneMode && n.parentId === focus.id))
+    ...list.filter((n) => n.parentId && visible.has(n.parentId) && !(focus.kind === 'task' && n.parentId === focus.id))
       .map((n) => ({ fromId: n.parentId as string, toId: n.id, color: hl.get(n.id), dim: hl.size > 0 && !hl.has(n.id) })),
     // while a card is being named, a dashed line shows where it will hang
     ...(editorParent && !(focus.kind === 'task' && editorParent === focus.id) ? [{ fromId: editorParent, toId: NEW_CARD_ID, kind: 'dep' as const }] : []),
-  ], [list, visible, hl, editorParent, focus.kind, focus.id, laneMode])
+  ], [list, visible, hl, editorParent, focus.kind, focus.id])
   const positions = useMemo(() => Object.fromEntries(list.map((n) => [n.id, disp[n.id] ?? { x: n.x, y: n.y }])), [list, disp])
   const operators = useMemo(() => [...new Set(all.map((n) => n.assignee).filter((a): a is string => !!a))].sort(), [all])
 
@@ -440,7 +465,7 @@ export default function Whiteboard(): JSX.Element {
     const s = useBoardStore.getState().nodes
     const parent = s[parentId]
     const stored = nextChildSpot(parent, childMap(s), wrapRef.current)
-    if (parentId === focusRef.current) return { ...stored, sx: stored.x, sy: stored.y }
+    if (parentId === focusRef.current && !laneModeRef.current) return { ...stored, sx: stored.x, sy: stored.y }
     const NEW = '\u0000new'
     const fake: Record<string, BoardNode> = { ...s, [parentId]: { ...parent, collapsed: false },
       [NEW]: { id: NEW, parentId, kind, title: '', x: stored.x, y: 1e9, weight: 1, after: [], createdAt: Number.MAX_SAFE_INTEGER, updatedAt: 0 } as BoardNode }
@@ -448,6 +473,7 @@ export default function Whiteboard(): JSX.Element {
     // While a row still has room, the box goes right after its last card as drawn now: the row only re-centres
     // once the card exists, so taking the re-centred slot would cover a neighbour while typing.
     const now = dispRef.current, sibs = (childMap(s).get(parentId) ?? []).map((c) => now[c.id]).filter(Boolean)
+    if (parentId === focusRef.current) return { x: at.x, y: at.y, sx: stored.x, sy: stored.y } // swimlanes: the new card starts in Unsorted
     if (sibs.length % wrapRef.current && !parent.collapsed) {
       const rowY = Math.max(...sibs.map((p) => p.y)), last = sibs.filter((p) => p.y === rowY).reduce((a, b) => (b.x > a.x ? b : a))
       return { x: last.x + BRANCH_W, y: rowY, sx: stored.x, sy: stored.y }
@@ -475,7 +501,7 @@ export default function Whiteboard(): JSX.Element {
     const parent = s[editor.parentId]
     // Enter after + keeps the keyboard up and opens the next sibling, so a whole list goes in without touching the board.
     // A card dropped by double-tapping the board is a one-off: Enter just saves it.
-    if (again && parent && !editor.free) openEditor({ kind: editor.kind, parentId: editor.parentId, ...addSpot(editor.parentId, editor.kind) })
+    if (again && parent && !editor.free && editor.kind !== 'project') openEditor({ kind: editor.kind, parentId: editor.parentId, ...addSpot(editor.parentId, editor.kind) })
     else closeEditor()
   }
 
@@ -902,7 +928,7 @@ export default function Whiteboard(): JSX.Element {
     return out
   }, [focus, board])
   const context: JSX.Element[] = []
-  if (laneMode && editable) context.push(<LaneBar key="lanes" names={laneNames(focus, board.kids)} counts={laneCounts} dir={laneDir} onDir={(d) => updateNode(focus.id, { laneDir: d })} onEdit={onLaneEdit} />)
+  if (laneMode && editable) context.push(<LaneBar key="lanes" names={laneNames(focus, board.kids)} counts={laneCounts} dir={laneDir} onDir={(d) => updateNode(focus.id, { laneDir: d })} onEdit={onLaneEdit} onDone={toggleLanes} />)
   if (tool === 'connect') context.push(<span key="hint" className="wb-context-hint">{connectFrom ? 'Now tap what it points to' : 'Tap where the arrow starts'}</span>)
   else if (tool === 'shape') context.push(
     <div key="shapes" className="wb-swatches" role="group" aria-label="Shape">
@@ -1041,7 +1067,7 @@ export default function Whiteboard(): JSX.Element {
             )}
             {cloud && <PeerCursors scope={scopeId} view={sharedView} />}
             {editor && (
-              <InlineEditor key={editor.seq} kind={editor.kind} x={editor.x} y={editor.y} onSave={onSave} onCancel={cancelEditor} />
+              <InlineEditor key={editor.seq} kind={editor.kind} x={laneMode && disp[NEW_CARD_ID] ? disp[NEW_CARD_ID].x : editor.x} y={laneMode && disp[NEW_CARD_ID] ? disp[NEW_CARD_ID].y : editor.y} onSave={onSave} onCancel={cancelEditor} />
             )}
           </div>
         </MobileCanvas>

@@ -22,6 +22,26 @@ let modHeld = false, downAt = 0
 if (typeof window !== 'undefined') {
   window.addEventListener('pointerdown', (e) => { modHeld = e.metaKey || e.ctrlKey; downAt = Date.now() }, true)
 }
+
+// While a card or board item is held, show it is ready BEFORE the finger lifts: once the hold reaches the long-press
+// time without moving, it gets a gold ring and a "Release to select" badge (and a short buzz on phones).
+const HOLD_SLOP = 8
+let holdEl: HTMLElement | null = null, holdTimer = 0, holdX = 0, holdY = 0
+const endHold = (): void => { window.clearTimeout(holdTimer); holdEl?.classList.remove('is-hold-ready'); holdEl = null }
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', (e) => {
+    endHold()
+    if (e.metaKey || e.ctrlKey || e.button > 0) return
+    const t = e.target as HTMLElement | null
+    if (!t || t.closest('button, input, textarea, select, a')) return // chips, fields and links keep their own press
+    const el = t.closest<HTMLElement>('.wb-card, .wb-el')
+    if (!el) return
+    holdX = e.clientX; holdY = e.clientY
+    holdTimer = window.setTimeout(() => { holdEl = el; el.classList.add('is-hold-ready'); try { navigator.vibrate?.(12) } catch { /* not supported */ } }, LONG_PRESS_MS)
+  }, true)
+  window.addEventListener('pointermove', (e) => { if (Math.hypot(e.clientX - holdX, e.clientY - holdY) > HOLD_SLOP) endHold() }, true)
+  for (const ev of ['pointerup', 'pointercancel', 'dragstart', 'blur']) window.addEventListener(ev, endHold, true)
+}
 export const pickModifier = (): boolean => modHeld || Date.now() - downAt >= LONG_PRESS_MS
 /** Apply a pick press: Cmd/Ctrl adds or removes from the group; a long press selects just this one thing. */
 export function pick(id: string): void {

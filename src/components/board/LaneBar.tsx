@@ -10,10 +10,12 @@ interface LaneBarProps {
   onDir: (d: LaneDir) => void
   /** returns an error message to show, or undefined when the edit went through */
   onEdit: (e: LaneEdit) => string | undefined
+  /** leave swimlane mode */
+  onDone: () => void
 }
 
 /** The row above the bottom tools while swimlanes are on: orientation, the lanes, and add / rename / reorder / remove. */
-export default function LaneBar({ names, counts, dir, onDir, onEdit }: LaneBarProps): JSX.Element {
+export default function LaneBar({ names, counts, dir, onDir, onEdit, onDone }: LaneBarProps): JSX.Element {
   const [sel, setSel] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [fresh, setFresh] = useState('')
@@ -52,6 +54,7 @@ export default function LaneBar({ names, counts, dir, onDir, onEdit }: LaneBarPr
           onKeyDown={(e) => { if (e.key === 'Enter') addLane() }} />
         <button title="Add lane" aria-label="Add lane" disabled={!fresh.trim()} onClick={addLane}><Plus size={18} /></button>
       </div>
+      <button className="wb-lane-done" title="Leave swimlanes (the cards stay in their lanes)" onClick={onDone}>Done</button>
       {err && <span className="wb-lane-err" role="alert">{err}</span>}
     </div>
   )

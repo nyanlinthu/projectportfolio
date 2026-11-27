@@ -238,17 +238,22 @@ export function laneNames(focus: BoardNode, kids: ChildMap): string[] {
 }
 const inLane = (c: BoardNode, name: string, names: string[]): boolean => (name === UNSORTED ? !c.lane || !names.includes(c.lane) : c.lane === name)
 export const LANE_COL_W = 280
+/** A lane's row pitch and the tallest a card can get (three-line title + its chips), so long titles never poke out of the band. */
+const LANE_GAP = 14, LANE_PAD = 12, LANE_CARD_MAX = 170
+/** Rough height of a card with its chips when it has not been measured yet: 20px per title line (~21 characters), plus header, bar and chips. */
+export const estimateCardH = (title: string): number => 106 + 20 * Math.min(4, Math.max(1, Math.ceil(title.length / 21)))
 /**
  * Swimlane layout: the open card's children grouped by lane. 'rows' = one horizontal band per lane, each a left-to-right
  * grid (oldest first when dated); 'cols' = one vertical column per lane, each a top-to-bottom stack. An unfolded card
  * still opens its branch under it (in a column the branch stacks inside its own column), pushing the rest of its lane
  * down (rows: the lanes below too). Derived like displayLayout: the only thing stored is each card's `lane`.
  */
-export function laneLayout(focus: BoardNode, kids: ChildMap, wrap = COMPACT_MAX, dir: LaneDir = 'rows'): { pos: Record<string, { x: number; y: number }>; bands: LaneBand[] } {
+export function laneLayout(focus: BoardNode, kids: ChildMap, wrap = COMPACT_MAX, dir: LaneDir = 'rows', heights?: Record<string, number>): { pos: Record<string, { x: number; y: number }>; bands: LaneBand[] } {
   const cs = kids.get(focus.id) ?? []
   const names = laneNames(focus, kids)
   const out: Record<string, { x: number; y: number }> = { [focus.id]: { x: focus.x, y: focus.y } }
   const HEAD = 46
+  const H = (c: BoardNode): number => heights?.[c.id] ?? estimateCardH(c.title)
   const order = (mine: BoardNode[]): BoardNode[] => {
     const dated = mine.length > 0 && mine.every((c) => dateKey(c, kids))
     return [...mine].sort((a, b) => (dated ? byDate(kids)(a, b) : 0) || a.y - b.y || a.x - b.x || a.createdAt - b.createdAt)
@@ -259,7 +264,7 @@ export function laneLayout(focus: BoardNode, kids: ChildMap, wrap = COMPACT_MAX,
     const left0 = focus.x - ((names.length - 1) / 2) * LANE_COL_W // card left edges: a column is centred on its cards (+95)
     const y0 = focus.y + LEVEL_H + 10
     const cols = names.map((name, k) => ({ name, x: left0 + k * LANE_COL_W, cards: order(cs.filter((c) => inLane(c, name, names))) }))
-    for (const col of cols) col.cards.forEach((c, i) => { out[c.id] = { x: col.x, y: y0 + HEAD + i * ROW_H } })
+    for (const col of cols) { let y = y0 + HEAD; for (const c of col.cards) { out[c.id] = { x: col.x, y }; y += H(c) + LANE_GAP } }
     for (const col of cols) {
       for (const e of open(col.cards)) {
         const at = out[e.id]
@@ -268,7 +273,8 @@ export function laneLayout(focus: BoardNode, kids: ChildMap, wrap = COMPACT_MAX,
         Object.assign(out, br.pos)
       }
     }
-    const bottom = Math.max(y0 + HEAD + ROW_H, ...Object.values(out).map((p) => p.y + 130)) + 20
+    const hOf = (id: string): number => (heights?.[id] ?? LANE_CARD_MAX)
+    const bottom = Math.max(y0 + HEAD + 60, ...Object.entries(out).map(([id, p]) => p.y + hOf(id))) + LANE_PAD
     return { pos: out, bands: cols.map((c) => ({ name: c.name, top: y0, bottom, left: c.x + 95 - LANE_COL_W / 2 + 12, right: c.x + 95 + LANE_COL_W / 2 - 12, count: c.cards.length })) }
   }
 
@@ -277,9 +283,14 @@ export function laneLayout(focus: BoardNode, kids: ChildMap, wrap = COMPACT_MAX,
   let top = focus.y + LEVEL_H + 10
   for (const name of names) {
     const mine = order(cs.filter((c) => inLane(c, name, names)))
-    mine.forEach((c, i) => { out[c.id] = { x: left0 + (i % wrap) * BRANCH_W, y: top + HEAD + Math.floor(i / wrap) * ROW_H } })
-    const rows = Math.max(1, Math.ceil(mine.length / wrap))
-    const bottom = top + HEAD + rows * ROW_H - 20
+    let y = top + HEAD
+    for (let r = 0; r < mine.length; r += wrap) {
+      const row = mine.slice(r, r + wrap)
+      row.forEach((c, i) => { out[c.id] = { x: left0 + i * BRANCH_W, y } })
+      y += Math.max(...row.map(H)) + LANE_GAP
+    }
+    // a band ends just below the chips of its tallest card (an empty lane keeps a small drop area)
+    const bottom = (mine.length ? y - LANE_GAP : top + HEAD + 60) + LANE_PAD
     lanes.push({ name, top, bottom, cards: mine })
     top = bottom + 24
   }

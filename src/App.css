@@ -752,3 +752,8 @@ body.is-linking .wb-vtime-lane:hover { background-color: rgba(201,166,75,.08); }
 .wb-lane-chip.is-editing button:disabled, .wb-lane-add button:disabled { opacity: .35; cursor: default; }
 .wb-lane-chip.is-editing .is-danger { color: #E5736B; }
 .wb-lane-err { flex: none; color: #E5736B; font: 13px var(--sans); }
+.wb-lane-done { flex: none; min-height: 36px; padding: 0 14px; background: var(--gold); border: 0; border-radius: 18px; color: var(--bg); font: 700 13px var(--sans); cursor: pointer; }
+/* held long enough to select: shown before release so the finger knows it can let go */
+.wb-card.is-hold-ready, .wb-el.is-hold-ready { outline: 2px solid var(--gold); outline-offset: 4px; box-shadow: 0 0 0 8px rgba(212,175,55,.2), 0 0 26px rgba(212,175,55,.35); }
+.wb-card.is-hold-ready::after, .wb-el.is-hold-ready::after { content: 'Release to select'; position: absolute; left: 50%; top: -34px; transform: translateX(-50%); padding: 4px 10px; border-radius: 12px; background: var(--gold); color: var(--bg); font: 700 12px var(--sans); white-space: nowrap; pointer-events: none; z-index: 5; animation: wb-ready .18s ease-out; }
+@keyframes wb-ready { from { opacity: 0; top: -22px; } to { opacity: 1; top: -34px; } }
