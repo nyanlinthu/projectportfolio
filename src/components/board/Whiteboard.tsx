@@ -3,7 +3,7 @@ import { CANVAS_DRAG_EVENT, ConnectionLines, DrawLayer, MobileCanvas } from 'can
 import type { CanvasHandle } from 'canvas-kit'
 import { applyLaneEdit, BRANCH_W, childKind, childMap, compactChildren, deriveBoard, displayLayout, KIND_LABEL, LaneDir, LaneEdit, laneAt, laneLayout, laneNames, UNSORTED, nextChildSpot, nextStatus, PEN_COLORS, STICKY_COLORS, tidyPositions, wrapFor } from '@/lib/board'
 import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpToLine, Circle, Diamond, RectangleHorizontal, Square } from 'lucide-react'
-import { DEMO, resetDemo, STORE_KEYS } from '@/lib/demo'
+import { DEMO, STORE_KEYS } from '@/lib/demo'
 import { fileToSmallDataUrl } from '@/lib/image'
 import { owningNodeId, parentScope, resolvePage, rowKey } from '@/lib/scope'
 import { pageTitle, SearchHit } from '@/lib/search'
@@ -1038,7 +1038,6 @@ export default function Whiteboard(): JSX.Element {
           {focus.kind === 'task' ? (focusView.leaf ? focusView.label : `${focusView.pct}%`)
             : focusView.total ? `${focusView.pct}% · ${focusView.done}/${focusView.total}` : 'No tasks yet'}
         </span>}
-        {DEMO && <button className="wb-tidy" onClick={resetDemo} title="Put the example back as it was. Your changes are only in this browser.">Reset demo</button>}
         {cloud && <PresenceBar placeOf={placeOf} onGoTo={goToPerson} />}
         {cloud && (
           <button className="wb-bell" onClick={() => { const next = !inboxOpen; setAccountOpen(false); setInboxOpen(next) }}
