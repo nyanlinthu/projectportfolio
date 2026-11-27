@@ -223,6 +223,122 @@ export function displayLayout(focus: BoardNode, kids: ChildMap, wrap = COMPACT_M
   return out
 }
 
+
+export type LaneDir = 'rows' | 'cols'
+export interface LaneBand { name: string; top: number; bottom: number; left: number; right: number; count: number }
+export const UNSORTED = 'Unsorted'
+export const LANE_MAX = 24
+/** The lane names of a card's children, in order: the ones it lists, then any a child names, then Unsorted when some card has none. */
+export function laneNames(focus: BoardNode, kids: ChildMap): string[] {
+  const cs = kids.get(focus.id) ?? []
+  const names = [...(focus.lanes ?? [])]
+  for (const c of cs) if (c.lane && c.lane !== UNSORTED && !names.includes(c.lane)) names.push(c.lane)
+  if (cs.some((c) => !c.lane || !names.includes(c.lane))) names.push(UNSORTED)
+  return names
+}
+const inLane = (c: BoardNode, name: string, names: string[]): boolean => (name === UNSORTED ? !c.lane || !names.includes(c.lane) : c.lane === name)
+export const LANE_COL_W = 280
+/**
+ * Swimlane layout: the open card's children grouped by lane. 'rows' = one horizontal band per lane, each a left-to-right
+ * grid (oldest first when dated); 'cols' = one vertical column per lane, each a top-to-bottom stack. An unfolded card
+ * still opens its branch under it (in a column the branch stacks inside its own column), pushing the rest of its lane
+ * down (rows: the lanes below too). Derived like displayLayout: the only thing stored is each card's `lane`.
+ */
+export function laneLayout(focus: BoardNode, kids: ChildMap, wrap = COMPACT_MAX, dir: LaneDir = 'rows'): { pos: Record<string, { x: number; y: number }>; bands: LaneBand[] } {
+  const cs = kids.get(focus.id) ?? []
+  const names = laneNames(focus, kids)
+  const out: Record<string, { x: number; y: number }> = { [focus.id]: { x: focus.x, y: focus.y } }
+  const HEAD = 46
+  const order = (mine: BoardNode[]): BoardNode[] => {
+    const dated = mine.length > 0 && mine.every((c) => dateKey(c, kids))
+    return [...mine].sort((a, b) => (dated ? byDate(kids)(a, b) : 0) || a.y - b.y || a.x - b.x || a.createdAt - b.createdAt)
+  }
+  const open = (cards: BoardNode[]): BoardNode[] => cards.filter((c) => !c.collapsed && (kids.get(c.id)?.length ?? 0) > 0).sort((a, b) => out[a.id].y - out[b.id].y || out[a.id].x - out[b.id].x)
+
+  if (dir === 'cols') {
+    const left0 = focus.x - ((names.length - 1) / 2) * LANE_COL_W // card left edges: a column is centred on its cards (+95)
+    const y0 = focus.y + LEVEL_H + 10
+    const cols = names.map((name, k) => ({ name, x: left0 + k * LANE_COL_W, cards: order(cs.filter((c) => inLane(c, name, names))) }))
+    for (const col of cols) col.cards.forEach((c, i) => { out[c.id] = { x: col.x, y: y0 + HEAD + i * ROW_H } })
+    for (const col of cols) {
+      for (const e of open(col.cards)) {
+        const at = out[e.id]
+        const br = placeBranch(e, at, kids, 1)
+        for (const id of Object.keys(out)) if (id !== e.id && Math.abs(out[id].x - col.x) < LANE_COL_W / 2 && out[id].y > at.y + 100) out[id] = { x: out[id].x, y: out[id].y + br.depth }
+        Object.assign(out, br.pos)
+      }
+    }
+    const bottom = Math.max(y0 + HEAD + ROW_H, ...Object.values(out).map((p) => p.y + 130)) + 20
+    return { pos: out, bands: cols.map((c) => ({ name: c.name, top: y0, bottom, left: c.x + 95 - LANE_COL_W / 2 + 12, right: c.x + 95 + LANE_COL_W / 2 - 12, count: c.cards.length })) }
+  }
+
+  const left0 = focus.x - ((wrap - 1) / 2) * BRANCH_W
+  const lanes: { name: string; top: number; bottom: number; cards: BoardNode[] }[] = []
+  let top = focus.y + LEVEL_H + 10
+  for (const name of names) {
+    const mine = order(cs.filter((c) => inLane(c, name, names)))
+    mine.forEach((c, i) => { out[c.id] = { x: left0 + (i % wrap) * BRANCH_W, y: top + HEAD + Math.floor(i / wrap) * ROW_H } })
+    const rows = Math.max(1, Math.ceil(mine.length / wrap))
+    const bottom = top + HEAD + rows * ROW_H - 20
+    lanes.push({ name, top, bottom, cards: mine })
+    top = bottom + 24
+  }
+  for (const e of open(cs)) {
+    const at = out[e.id]
+    const br = placeBranch(e, at, kids, wrap)
+    for (const id of Object.keys(out)) if (id !== e.id && out[id].y > at.y + 100) out[id] = { x: out[id].x, y: out[id].y + br.depth }
+    for (const l of lanes) { if (l.top > at.y + 100) { l.top += br.depth; l.bottom += br.depth } else if (l.bottom > at.y) l.bottom += br.depth }
+    Object.assign(out, br.pos)
+  }
+  const xs = Object.values(out).map((p) => p.x)
+  const right = Math.max(left0 + (wrap - 1) * BRANCH_W, ...xs) + 190 + 36, left = Math.min(left0, ...xs) - 36 // an opened branch can be wider than the lane's grid
+  return { pos: out, bands: lanes.map((l) => ({ name: l.name, top: l.top, bottom: l.bottom, left, right, count: l.cards.length })) }
+}
+
+/** Which lane a drop at (x, y) lands in: the band it is inside, else the nearest one. */
+export function laneAt(bands: LaneBand[], dir: LaneDir, x: number, y: number): string | undefined {
+  if (!bands.length) return undefined
+  const key = dir === 'cols' ? x : y
+  const lo = (b: LaneBand): number => (dir === 'cols' ? b.left : b.top), hi = (b: LaneBand): number => (dir === 'cols' ? b.right : b.bottom)
+  const hit = bands.find((b) => key >= lo(b) && key <= hi(b))
+  if (hit) return hit.name
+  return [...bands].sort((a, b) => Math.abs(key - (lo(a) + hi(a)) / 2) - Math.abs(key - (lo(b) + hi(b)) / 2))[0].name
+}
+
+/** Lane edits as ONE store write each, so one undo puts a whole add / rename / remove / reorder back. */
+export type LaneEdit = { type: 'add'; name: string } | { type: 'rename'; from: string; to: string } | { type: 'remove'; name: string } | { type: 'move'; name: string; by: -1 | 1 }
+export function applyLaneEdit(nodes: Record<string, BoardNode>, focusId: string, kids: ChildMap, edit: LaneEdit): { nodes: Record<string, BoardNode>; error?: string } {
+  const focus = nodes[focusId]
+  if (!focus) return { nodes }
+  const lanes = laneNames(focus, kids).filter((n) => n !== UNSORTED)
+  const clean = (t: string): string => t.trim().replace(/\s+/g, ' ').slice(0, LANE_MAX)
+  const taken = (n: string, except?: string): boolean => lanes.some((l) => l.toLowerCase() === n.toLowerCase() && l !== except) || n.toLowerCase() === UNSORTED.toLowerCase()
+  const next = { ...nodes }
+  const setLanes = (list: string[]): void => { next[focusId] = { ...focus, lanes: list, updatedAt: Date.now() } }
+  if (edit.type === 'add') {
+    const n = clean(edit.name)
+    if (!n) return { nodes, error: 'Give the lane a name.' }
+    if (taken(n)) return { nodes, error: `There is already a lane called "${n}".` }
+    setLanes([...lanes, n])
+  } else if (edit.type === 'rename') {
+    const n = clean(edit.to)
+    if (!n) return { nodes, error: 'Give the lane a name.' }
+    if (n === edit.from) return { nodes }
+    if (taken(n, edit.from)) return { nodes, error: `There is already a lane called "${n}".` }
+    setLanes(lanes.map((l) => (l === edit.from ? n : l)))
+    for (const c of kids.get(focusId) ?? []) if (c.lane === edit.from) next[c.id] = { ...c, lane: n, updatedAt: Date.now() }
+  } else if (edit.type === 'remove') {
+    setLanes(lanes.filter((l) => l !== edit.name))
+    for (const c of kids.get(focusId) ?? []) if (c.lane === edit.name) next[c.id] = { ...c, lane: undefined, updatedAt: Date.now() }
+  } else {
+    const i = lanes.indexOf(edit.name), j = i + edit.by
+    if (i < 0 || j < 0 || j >= lanes.length) return { nodes }
+    const l = [...lanes]; [l[i], l[j]] = [l[j], l[i]]
+    setLanes(l)
+  }
+  return { nodes: next }
+}
+
 export const BRANCH_W = 250 // a little wider than a slot, so neighbouring + and ▸ chips never touch
 
 /**

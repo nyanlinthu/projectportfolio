@@ -20,6 +20,12 @@ export interface BoardNode {
   status?: Status
   /** Tasks only. Where it sits on the priority board; absent until someone sorts it. */
   priority?: Priority
+  /** Swimlane this card sits in, among its siblings (e.g. "Esports"). Absent = the Unsorted lane. */
+  lane?: string
+  /** On a container: the names and order of the swimlanes of its children. */
+  lanes?: string[]
+  /** On a container: whether its lanes run as rows (horizontal bands) or columns. Default rows. */
+  laneDir?: 'rows' | 'cols'
   /** 1-5, how much this gates the outcome. Default 1. */
   weight: number
   /** Finish-to-start predecessors (task ids). */

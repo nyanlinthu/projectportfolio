@@ -730,3 +730,25 @@ body.is-linking .wb-vtime-lane:hover { background-color: rgba(201,166,75,.08); }
 @keyframes wb-snapout { 0% { transform: scale(1); } 35% { transform: scale(.975); } 100% { transform: scale(1); } }
 @keyframes wb-snapin { 0% { outline: 3px solid var(--gold); outline-offset: 10px; } 60% { outline: 3px solid var(--gold); outline-offset: 0; } 100% { outline: 3px solid transparent; outline-offset: 0; } }
 @media (prefers-reduced-motion: reduce) { .wb-view.is-snapout, .wb-view.is-snapin { animation: none; } }
+
+/* ---- swimlanes ---- */
+:root { --lane-0: #C9A64B; --lane-1: #7FB3D5; --lane-2: #92A524; --lane-3: #E59A8C; --lane-4: #A98FD6; --lane-5: #5FB8A8; }
+.wb-lane { position: absolute; pointer-events: none; z-index: 0; border: 1px solid color-mix(in srgb, var(--lane) 45%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--lane) 7%, transparent); }
+.wb-lane.is-empty { border-style: dashed; }
+.wb-lane-label { position: absolute; left: 14px; top: 10px; display: flex; align-items: baseline; gap: 8px; font: 600 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--lane); }
+.wb-lane-label b { font-weight: 500; color: var(--gray); letter-spacing: 0; }
+.wb-lane-hint { position: absolute; left: 14px; top: 44px; font: 13px var(--sans); color: var(--gray); }
+.wb-lanebar { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.wb-lane-dir { display: flex; gap: 2px; flex: none; }
+.wb-lane-dir button, .wb-lane-add button, .wb-lane-chip.is-editing button { width: 36px; height: 36px; display: grid; place-items: center; background: none; border: 0; border-radius: 3px; color: var(--gray); cursor: pointer; }
+.wb-lane-dir button.is-on { background: var(--gold); color: var(--bg); }
+.wb-lane-chip { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; background: var(--bg); border: 1px solid var(--rule); border-radius: 18px; color: var(--cream); font: 600 13px var(--sans); cursor: pointer; }
+.wb-lane-chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--lane, var(--gray)); }
+.wb-lane-chip b { font-weight: 500; color: var(--gray); }
+.wb-lane-chip.is-unsorted { opacity: .75; cursor: default; }
+.wb-lane-chip.is-editing { padding: 0 2px; gap: 0; cursor: default; }
+.wb-lane-chip.is-editing input, .wb-lane-add input { width: 120px; min-height: 36px; padding: 0 8px; background: transparent; border: 0; color: var(--cream); font: 16px var(--sans); outline: 0; }
+.wb-lane-add { flex: none; display: flex; align-items: center; border: 1px dashed var(--rule); border-radius: 18px; padding: 0 2px 0 6px; }
+.wb-lane-chip.is-editing button:disabled, .wb-lane-add button:disabled { opacity: .35; cursor: default; }
+.wb-lane-chip.is-editing .is-danger { color: #E5736B; }
+.wb-lane-err { flex: none; color: #E5736B; font: 13px var(--sans); }
