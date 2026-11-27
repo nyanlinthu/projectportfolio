@@ -595,6 +595,7 @@ body.is-linking .wb-vtime-lane:hover { background-color: rgba(201,166,75,.08); }
 .wb-plans-titles { flex: 1; min-width: 0; }
 .wb-plans-titles h2 { margin: 2px 0 0; color: var(--cream); font: 500 19px var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wb-plans-body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.wb-plans-body > * { flex-shrink: 0; } /* the body scrolls; its children keep their full height instead of being squeezed and clipped */
 .wb-plans-row { display: flex; gap: 6px; align-items: stretch; }
 .wb-plans-list .wb-plans-rm { flex: none; width: 48px; min-height: 56px; justify-content: center; padding: 0; color: var(--muted, #9aa); font-size: 16px; }
 .wb-plans-list .wb-plans-rm.is-sure { width: auto; padding: 0 14px; color: #fff; background: #b4463c; border-color: #b4463c; font-weight: 600; font-size: 14px; }
