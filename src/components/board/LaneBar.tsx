@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Columns3, Plus, Rows3, X } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Columns3, Plus, Rows3, X } from 'lucide-react'
 import { LANE_MAX, LaneDir, LaneEdit, UNSORTED } from '@/lib/board'
 
 interface LaneBarProps {
@@ -34,11 +34,11 @@ export default function LaneBar({ names, counts, dir, onDir, onEdit, onDone }: L
         const at = real.indexOf(n)
         return editing ? (
           <div key={n} className="wb-lane-chip is-editing">
-            <button title="Move earlier" aria-label="Move lane earlier" disabled={at <= 0} onClick={() => run({ type: 'move', name: n, by: -1 })}><ChevronLeft size={16} /></button>
+            <button title={dir === 'rows' ? "Move up" : "Move left"} aria-label="Move lane earlier" disabled={at <= 0} onClick={() => run({ type: 'move', name: n, by: -1 })}>{dir === 'rows' ? <ChevronUp size={16} /> : <ChevronLeft size={16} />}</button>
             <input value={draft} maxLength={LANE_MAX} aria-label="Lane name" autoFocus onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { if (run({ type: 'rename', from: n, to: draft })) setSel(draft.trim().replace(/\s+/g, ' ') || n) } if (e.key === 'Escape') { setSel(null); setErr(undefined) } }}
               onBlur={() => { if (draft.trim() && draft.trim() !== n) { if (run({ type: 'rename', from: n, to: draft })) setSel(null) } }} />
-            <button title="Move later" aria-label="Move lane later" disabled={at < 0 || at >= real.length - 1} onClick={() => run({ type: 'move', name: n, by: 1 })}><ChevronRight size={16} /></button>
+            <button title={dir === 'rows' ? "Move down" : "Move right"} aria-label="Move lane later" disabled={at < 0 || at >= real.length - 1} onClick={() => run({ type: 'move', name: n, by: 1 })}>{dir === 'rows' ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</button>
             <button className="is-danger" title={counts[n] ? `Remove lane (its ${counts[n]} cards go to Unsorted)` : 'Remove lane'} aria-label="Remove lane"
               onMouseDown={(e) => e.preventDefault()} onClick={() => { if (run({ type: 'remove', name: n })) setSel(null) }}><X size={16} /></button>
           </div>
