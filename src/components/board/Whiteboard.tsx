@@ -1028,7 +1028,7 @@ export default function Whiteboard(): JSX.Element {
             const at = pasteSpot()
             setSelectedEl(useElementStore.getState().add({ kind: 'link', scopeId, z: topZ(), x: at.x - 90, y: at.y - 20, key: h.key, title: h.title }))
           }} />
-        {editable && treeView && !page && list.length > 2 && <button className="wb-tidy" onClick={onTidy}>{undoTidy ? 'Undo' : 'Tidy'}</button>}
+        {editable && treeView && !page && list.length > 2 && <button className="wb-tidy" onClick={onTidy}>{undoTidy ? 'Undo' : 'Reset'}</button>}
         {editable && treeView && !page && list.length > 2 && <>
           <button className="wb-tidy" onClick={() => onFoldLevel('task')} title="Fold away the tasks (in the project you last touched)">− Tasks</button>
           <button className="wb-tidy" onClick={() => onFoldLevel('milestone')} title="Fold away the milestones (in the project you last touched)">− Milestones</button>
