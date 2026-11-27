@@ -564,6 +564,31 @@ export default function Whiteboard(): JSX.Element {
     fitView()
   }
 
+  // Fold one level at a time, inside the project of the card last tapped or folded (the whole board if none).
+  // 'task' hides every task (milestones stay); 'milestone' hides every milestone (projects stay).
+  const lastTouched = useRef<string | null>(null)
+  const onFoldLevel = (level: 'task' | 'milestone'): void => {
+    const s = useBoardStore.getState().nodes
+    let scope: BoardNode | undefined = lastTouched.current ? s[lastTouched.current] : undefined
+    while (scope && scope.kind !== 'project' && scope.parentId) scope = s[scope.parentId]
+    if (!scope || scope.kind !== 'project') scope = focus
+    const kids = childMap(s)
+    const hide: string[] = []
+    const holds = level === 'task' ? ['milestone', 'task'] : ['project']
+    const walk = (n: BoardNode): void => {
+      if (holds.includes(n.kind) && (kids.get(n.id)?.length ?? 0) > 0 && !n.collapsed) hide.push(n.id)
+      for (const c of kids.get(n.id) ?? []) walk(c)
+    }
+    walk(scope)
+    if (!hide.length) return
+    useBoardStore.setState((cur) => {
+      const next = { ...cur.nodes }
+      for (const id of hide) next[id] = { ...next[id], collapsed: true, updatedAt: Date.now() }
+      return { nodes: next }
+    })
+    pulseLines()
+  }
+
   // One tap selects (after a short wait, so a double-tap never flashes the sheet); two taps open the card.
   const pendingTap = useRef<{ id: string; timer: number; fire: () => void } | null>(null)
   const pickForArrow = useCallback((id: string) => {
@@ -580,6 +605,7 @@ export default function Whiteboard(): JSX.Element {
     if ((useBoardStore.getState().nodes[id]?.z ?? 0) < z - 1) useBoardStore.getState().setZ({ [id]: z })
   }, [])
   const onTap = useCallback((id: string) => {
+    lastTouched.current = id
     if (toolRef.current === 'connect') { pickForArrow(id); return }
     // Cmd/Ctrl-click or a long press picks the card into the group instead of opening it
     if (pickModifier()) { pick(id); return }
@@ -625,6 +651,7 @@ export default function Whiteboard(): JSX.Element {
     setMoreBelow((m) => (m ? { ...m, n: Math.max(0, m.n - Math.max(1, Math.round(step / (175 * c.zoom)) * wrapRef.current)) } : m))
   }
   const onToggleFold = useCallback((id: string) => {
+    lastTouched.current = id
     const s = useBoardStore.getState().nodes
     const n = s[id]
     if (!n) return
@@ -1002,6 +1029,10 @@ export default function Whiteboard(): JSX.Element {
             setSelectedEl(useElementStore.getState().add({ kind: 'link', scopeId, z: topZ(), x: at.x - 90, y: at.y - 20, key: h.key, title: h.title }))
           }} />
         {editable && treeView && !page && list.length > 2 && <button className="wb-tidy" onClick={onTidy}>{undoTidy ? 'Undo' : 'Tidy'}</button>}
+        {editable && treeView && !page && list.length > 2 && <>
+          <button className="wb-tidy" onClick={() => onFoldLevel('task')} title="Fold away the tasks (in the project you last touched)">− Tasks</button>
+          <button className="wb-tidy" onClick={() => onFoldLevel('milestone')} title="Fold away the milestones (in the project you last touched)">− Milestones</button>
+        </>}
         {!page && <span className="wb-top-stat" style={{ color: focusView.color }}>
           <i style={{ background: focusView.color }} />
           {focus.kind === 'task' ? (focusView.leaf ? focusView.label : `${focusView.pct}%`)
