@@ -30,6 +30,29 @@ export default function LoginStage(): JSX.Element {
           </svg>
           <figcaption><b>Project breakdown</b> Progress rolls up from finished tasks</figcaption>
         </figure>
+        {/* 1b — kanban and timeline, side by side in one tile */}
+        <figure className="wb-tile wb-tile-f">
+          <svg viewBox="0 0 320 210" role="img" aria-label="A kanban board next to a timeline">
+            <rect className="half" x="6" y="8" width="150" height="194" rx="6" />
+            <text className="lab" x="14" y="24" style={{ fill: '#8A93A6' }}>KANBAN</text>
+            {[0, 1, 2].map((c) => (
+              <g key={c}>
+                <rect className="kcol" x={12 + c * 47} y="34" width="43" height="160" rx="4" />
+                <circle className={c === 2 ? 'dot ok' : c === 1 ? 'dot dg' : 'dot'} cx={21 + c * 47} cy="46" r="3.5" />
+                <rect className="tx" x={29 + c * 47} y="44" width="20" height="4" rx="2" />
+                {Array.from({ length: [3, 2, 3][c] }).map((_, i) => <KCard key={i} x={16 + c * 47} y={58 + i * 44} on={c === 2} />)}
+              </g>
+            ))}
+            <rect className="half" x="164" y="8" width="150" height="194" rx="6" />
+            <text className="lab" x="172" y="24" style={{ fill: '#8A93A6' }}>TIMELINE</text>
+            <g className="grid">{[0, 1, 2, 3, 4].map((i) => <path key={i} d={`M${194 + i * 29} 32 V194`} />)}</g>
+            <g>{['MAR', 'APR', 'MAY', 'JUN'].map((m, i) => <text key={m} className="mo" x={196 + i * 29} y="34">{m}</text>)}</g>
+            <Gantt y={46} x={176} w={62} tone="green" /><Gantt y={72} x={196} w={78} tone="green" /><Gantt y={98} x={222} w={52} tone="orange" />
+            <Gantt y={124} x={240} w={66} tone="gold" /><Gantt y={150} x={206} w={44} tone="orange" /><Gantt y={176} x={252} w={54} tone="gold" />
+            <path className="today" d="M258 38 V196" />
+          </svg>
+          <figcaption><b>Kanban &amp; Timeline</b> Same cards, by status or on a schedule</figcaption>
+        </figure>
         {/* 2 — swimlanes */}
         <figure className="wb-tile wb-tile-b">
           <svg viewBox="0 0 320 210" role="img" aria-label="Swimlanes">
@@ -125,4 +148,18 @@ function Card({ x, y, pct }: { x: number; y: number; pct: number }): JSX.Element
       <rect className="fill green" x={x + 10} y={y + 40} width={58 * pct} height="4" rx="2" />
     </g>
   )
+}
+
+function KCard({ x, y, on }: { x: number; y: number; on?: boolean }): JSX.Element {
+  return (
+    <g>
+      <rect className="nd sm" x={x} y={y} width="35" height="38" rx="3" />
+      <rect className="tx" x={x + 5} y={y + 7} width="24" height="4" rx="2" />
+      <rect className="tx" x={x + 5} y={y + 15} width="17" height="3" rx="1.5" />
+      <rect className={on ? 'fill green' : 'bar'} x={x + 5} y={y + 28} width="25" height="3" rx="1.5" />
+    </g>
+  )
+}
+function Gantt({ x, y, w, tone }: { x: number; y: number; w: number; tone: 'green' | 'orange' | 'gold' }): JSX.Element {
+  return <rect className={`gb ${tone}`} x={x} y={y} width={w} height="12" rx="3" />
 }
