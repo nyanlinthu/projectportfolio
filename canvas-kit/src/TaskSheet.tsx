@@ -9,7 +9,15 @@ export interface ChecklistGroup { id: string; title: string; items: ChecklistIte
 
 export function AutosizeTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   const ref = useRef<HTMLTextAreaElement>(null);
-  useLayoutEffect(() => { const el = ref.current; if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }, [props.value]);
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return;
+    // Measuring collapses the box for a moment, which would snap any scrolling parent back to the top while
+    // typing. Remember every scrolled ancestor's position and put it back after.
+    const kept: [Element, number][] = [];
+    for (let p = el.parentElement; p; p = p.parentElement) if (p.scrollTop) kept.push([p, p.scrollTop]);
+    el.style.height = "auto"; el.style.height = el.scrollHeight + "px";
+    for (const [p, top] of kept) p.scrollTop = top;
+  }, [props.value]);
   return <textarea ref={ref} rows={1} {...props} style={{ resize: "none", overflow: "hidden", ...props.style }} />;
 }
 
