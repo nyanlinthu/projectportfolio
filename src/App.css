@@ -587,14 +587,14 @@ body.is-linking .wb-vtime-lane:hover { background-color: rgba(201,166,75,.08); }
 .wb-kicker .wb-plans-chip:hover { color: var(--cream); border-color: var(--gold); }
 .wb-kicker .wb-plans-chip.is-full { color: var(--green); border-color: color-mix(in srgb, var(--green) 50%, transparent); }
 .wb-kicker:has(.wb-plans-chip) { justify-content: flex-start; }
-.wb-plans-backdrop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px;
+.wb-plans-backdrop { position: fixed; inset: 0; overscroll-behavior: contain; touch-action: pan-y; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px;
   background: rgba(6,12,28,.55); backdrop-filter: blur(2px); }
-.wb-plans { width: min(920px, 100%); max-height: min(86vh, 900px); display: flex; flex-direction: column; background: var(--panel);
+.wb-plans { width: min(920px, 100%); max-height: min(86vh, 900px); max-height: min(86dvh, 900px); min-height: 0; display: flex; flex-direction: column; background: var(--panel);
   border: 1px solid rgba(255,255,255,.08); border-radius: 14px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.7); overflow: hidden; }
 .wb-plans-head { display: flex; align-items: center; gap: 6px; padding: 12px 8px 10px 16px; border-bottom: 1px solid var(--rule); }
 .wb-plans-titles { flex: 1; min-width: 0; }
 .wb-plans-titles h2 { margin: 2px 0 0; color: var(--cream); font: 500 19px var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wb-plans-body { overflow: auto; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.wb-plans-body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
 .wb-plans-row { display: flex; gap: 6px; align-items: stretch; }
 .wb-plans-list .wb-plans-rm { flex: none; width: 48px; min-height: 56px; justify-content: center; padding: 0; color: var(--muted, #9aa); font-size: 16px; }
 .wb-plans-list .wb-plans-rm.is-sure { width: auto; padding: 0 14px; color: #fff; background: #b4463c; border-color: #b4463c; font-weight: 600; font-size: 14px; }
