@@ -57,8 +57,8 @@ export default function LoginStage(): JSX.Element {
             <rect className="pgbox" x="14" y="10" width="292" height="190" rx="6" />
             <rect className="tx hd" x="30" y="26" width="120" height="9" rx="3" />
             <rect className="tx" x="30" y="46" width="250" height="5" rx="2" /><rect className="tx" x="30" y="58" width="200" height="5" rx="2" />
-            <g><rect className="chip" x="30" y="72" width="78" height="18" rx="9" /><text className="chipt" x="40" y="85">@ Mya Han</text></g>
-            <rect className="tx" x="116" y="78" width="110" height="5" rx="2" />
+            <g><rect className="chip" x="30" y="72" width="52" height="18" rx="9" /><text className="chipt" x="40" y="85">@ John</text></g>
+            <rect className="tx" x="90" y="78" width="130" height="5" rx="2" />
             <g><rect className="embed" x="30" y="102" width="260" height="84" rx="5" /><path className="fold" d="M262 102 h28 v28 z" />
               <rect className="tx hd" x="44" y="116" width="96" height="8" rx="3" />
               <rect className="tx" x="44" y="134" width="190" height="5" rx="2" /><rect className="tx" x="44" y="146" width="150" height="5" rx="2" />
