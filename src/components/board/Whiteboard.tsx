@@ -188,14 +188,14 @@ export default function Whiteboard(): JSX.Element {
   // Swimlanes (the toolbar's lanes button): the open card's children grouped into lanes, as rows or as columns.
   // Remembered on this device; each card's own `lane` and its parent's `lanes` / `laneDir` are what is shared.
   // Always on when the page loads. Done / the toolbar button turn it off for this visit only: it is not remembered, so a
-  // refresh brings it back. The lane bar shows whenever it is on (lanes can be added at any level); the cards are only
-  // arranged into bands once the open card has lanes (or a child names one).
+  // refresh brings it back. While on, the open card's children always sit in labelled lanes: with none made yet they
+  // all sit in one visible "Unsorted" band (with a hint to add a lane), so a first-time board is never unexplained.
   const [lanesOn, setLanesOn] = useState(true)
   const toggleLanes = useCallback(() => setLanesOn((v) => !v), [])
   const laneDir: LaneDir = focus.laneDir === 'cols' ? 'cols' : 'rows'
   const laneBar = lanesOn && !page && viewMode === 'tree'
   const hasLanes = (focus.lanes?.length ?? 0) > 0 || (board.kids.get(focus.id) ?? []).some((c) => !!c.lane)
-  const laneMode = laneBar && hasLanes
+  const laneMode = laneBar
   const laneModeRef = useRef(laneMode); laneModeRef.current = laneMode
   // real card heights (title length varies), so a lane ends just below its tallest card's chips
   const [heights, setHeights] = useState<Record<string, number>>({})
@@ -1034,7 +1034,7 @@ export default function Whiteboard(): JSX.Element {
             {laneMode && lanes && lanes.bands.map((b, i) => (
               <div key={b.name} className={`wb-lane is-${laneDir}${b.count ? '' : ' is-empty'}`} aria-hidden
                 style={{ left: b.left, top: b.top, width: b.right - b.left, height: b.bottom - b.top, '--lane': `var(--lane-${i % 6})` } as React.CSSProperties}>
-                <span className="wb-lane-label">{b.name}<b>{b.count}</b></span>
+                <span className="wb-lane-label">{b.name}<b>{b.count}</b>{!hasLanes && b.name === UNSORTED && b.count > 0 && <em className="wb-lane-note">add a lane in the bar below to group these cards</em>}</span>
                 {!b.count && <span className="wb-lane-hint">Drop cards here</span>}
               </div>
             ))}

@@ -787,3 +787,4 @@ body.is-linking .wb-vtime-lane:hover { background-color: rgba(201,166,75,.08); }
 .wb-pool-div.is-rows::after { left: 0; right: 0; top: 6px; height: 2px; }
 .wb-pool-div.is-cols::after { top: 0; bottom: 0; left: 6px; width: 2px; }
 .wb-pool-div:hover::after, .wb-pool-div:active::after { opacity: 1; }
+.wb-lane-note { font: 400 12px var(--sans); font-style: normal; letter-spacing: 0; text-transform: none; color: var(--gray); }

@@ -164,9 +164,22 @@ export function watchSession(): () => void {
   if (!cloudEnabled || !auth) { useSession.setState({ status: 'local' }); return () => undefined }
   return onAuthStateChanged(auth, (fu: User | null) => { void onUser(fu) })
 }
+// A brand-new account can ask for its data a moment before the server accepts its sign-in token and the records created
+// for it a second earlier: the first request is refused ("Missing or insufficient permissions") and only a reload
+// worked. So a refusal while opening is retried (fresh token, a short wait, up to 3 times) before any error is shown.
+let openRetries = 0
+const isDenied = (e: unknown): boolean => (e as { code?: string } | null)?.code === 'permission-denied' || (e instanceof Error && /insufficient permissions/i.test(e.message))
+async function retryOpen(fu: User): Promise<boolean> {
+  if (openRetries >= 3) return false
+  openRetries++
+  await new Promise((r) => setTimeout(r, 600 * openRetries))
+  try { await fu.getIdToken(true) } catch { /* offline: the retry below reports it */ }
+  void onUser(fu)
+  return true
+}
 async function onUser(fu: User | null): Promise<void> {
   stopSync()
-  if (!fu) { useSession.setState({ isAdmin: false, status: 'signed-out', user: null, workspaces: [], workspaceId: null, members: [], invites: [] }); return }
+  if (!fu) { openRetries = 0; useSession.setState({ isAdmin: false, status: 'signed-out', user: null, workspaces: [], workspaceId: null, members: [], invites: [] }); return }
   const provider = fu.providerData.some((p) => p.providerId === 'google.com') ? 'google' : 'email'
   const user: SessionUser = { uid: fu.uid, email: fu.email ?? '', name: fu.displayName ?? (fu.email ?? 'You').split('@')[0], provider }
   // Only a verified address gets in. Google and email-link sign-ins are verified by construction; this catches anything else.
@@ -183,6 +196,7 @@ async function onUser(fu: User | null): Promise<void> {
     useSession.setState({ workspaces })
     await openWorkspace(open.id)
   } catch (e) {
+    if (isDenied(e) && (await retryOpen(fu))) return
     useSession.setState({ status: 'error', error: e instanceof Error ? e.message : String(e) })
   }
 }
@@ -304,7 +318,7 @@ async function startSync(wid: string, uid: string, role: Role, scopes: string[],
   const blend = <T,>(base: T | undefined, mine: T, remote: T): T => keepPos(merge3(base, mine, remote), mine)
   const MERGE_MAX = 20 // a bigger burst is a rearrangement (Tidy, moving a branch): sent as one batch, as before
   const setSync = (): void => useSession.setState({ sync: !navigator.onLine ? 'offline' : inflight || pending.size ? 'saving' : 'saved' })
-  const ready = (): void => { if (live.nodes && live.elements && useSession.getState().status === 'opening') useSession.setState({ status: 'ready' }) }
+  const ready = (): void => { if (live.nodes && live.elements && useSession.getState().status === 'opening') { openRetries = 0; useSession.setState({ status: 'ready' }) } }
 
   async function flush(): Promise<void> {
     window.clearTimeout(timer); timer = 0
@@ -424,7 +438,13 @@ async function startSync(wid: string, uid: string, role: Role, scopes: string[],
     applying = false; pauseHistory(false)
     goodNodes = useBoardStore.getState().nodes
     live.nodes = true; ready(); restamp()
-  }, (err) => { if (!stopped) useSession.setState({ status: 'error', error: err.code === 'permission-denied' ? 'You no longer have access to this workspace.' : err.message }) })
+  }, (err) => {
+    if (stopped) return
+    // refused before anything ever arrived = still opening (see retryOpen); refused later = access was taken away
+    const cu = auth?.currentUser
+    if (err.code === 'permission-denied' && !live.nodes && cu) { void retryOpen(cu).then((again) => { if (!again) useSession.setState({ status: 'error', error: 'You no longer have access to this workspace.' }) }); return }
+    useSession.setState({ status: 'error', error: err.code === 'permission-denied' ? 'You no longer have access to this workspace.' : err.message })
+  })
 
   const unsubEls = onSnapshot(elsQ, (snap) => {
     const local = new Map(useElementStore.getState().elements.map((e) => [e.id, e]))
