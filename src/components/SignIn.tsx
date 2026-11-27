@@ -138,6 +138,8 @@ export function VerifyEmail(): JSX.Element {
       <button className="wb-gate-btn" disabled={busy} onClick={() => { setBusy(true); void checkVerified().finally(() => setBusy(false)) }}>{busy ? 'Checking…' : 'Continue'}</button>
       <button className="wb-gate-btn is-quiet" onClick={() => { void resendVerification().then((ok) => setResent(ok)) }}>{resent ? 'Sent again' : 'Send the email again'}</button>
       {error && <div className="wb-gate-err" role="alert">{error}</div>}
+      <p className="wb-gate-fine">Not arriving? Look in Spam and Promotions for a message from <b>noreply@flowboard-pm.firebaseapp.com</b>. Gmail address? Google confirms it for you, so no email is needed:</p>
+      <button className="wb-gate-btn is-quiet" onClick={() => void signIn()}>Continue with Google instead</button>
       <button className="wb-del" onClick={() => void signOut()}>Use a different address</button>
     </div></main>
   )

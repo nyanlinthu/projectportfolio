@@ -52,8 +52,7 @@ export async function sendEmailLink(email: string): Promise<boolean> {
     useSession.setState({ error: null })
     return true
   } catch (e) {
-    const code = (e as { code?: string }).code ?? ''
-    useSession.setState({ error: code === 'auth/quota-exceeded' ? 'Too many sign-up emails today. Try again tomorrow, or continue with Google.' : `Could not send the link (${code || 'unknown'})` })
+    useSession.setState({ error: mailError(e) })
     return false
   }
 }
@@ -78,6 +77,14 @@ function allowed(action: string, gapS: number, max: number): boolean {
   return true
 }
 const codeOf = (e: unknown): string => (e as { code?: string } | null)?.code ?? ''
+/** Why an email could not be sent, in words that say what to do next. */
+const mailError = (e: unknown): string => {
+  const c = codeOf(e)
+  if (c === 'auth/too-many-requests' || c === 'auth/quota-exceeded') return 'Firebase is limiting emails to this address for a few minutes. The first one may already be in your Spam or Promotions folder. If this is a Gmail address, Continue with Google gets you in with no email at all.'
+  if (c === 'auth/network-request-failed') return 'No connection. Check your internet and try again.'
+  if (c === 'auth/unauthorized-continue-uri' || c === 'auth/invalid-continue-uri') return 'This web address is not allowed to send sign-in emails yet. Use the main site, or ask the owner to authorise this domain.'
+  return `Could not send the email (${c || 'unknown'}).`
+}
 const setError = (error: string | null): void => useSession.setState({ error })
 
 /** Make an account with an address and a password. The address is confirmed by an emailed link before anyone gets in. */
@@ -90,7 +97,8 @@ export async function signUpWithPassword(email: string, password: string): Promi
   try {
     setError(null)
     const cred = await createUserWithEmailAndPassword(auth, clean, password)
-    try { await sendEmailVerification(cred.user, { url: `${window.location.origin}/` }) } catch { /* the next screen has "Send it again" */ }
+    try { await sendEmailVerification(cred.user, { url: `${window.location.origin}/` }) }
+    catch (e) { window.setTimeout(() => setError(mailError(e)), 400) } // shown on the confirm screen, which opens a moment after the account exists
     return true
   } catch (e) {
     const c = codeOf(e)
@@ -126,8 +134,7 @@ export async function resetPassword(email: string): Promise<boolean> {
   try { setError(null); await sendPasswordResetEmail(auth, clean, { url: `${window.location.origin}/` }) }
   catch (e) {
     const c = codeOf(e)
-    if (c === 'auth/too-many-requests' || c === 'auth/quota-exceeded') { setError('Too many reset emails. Try again later.'); return false }
-    if (c === 'auth/network-request-failed') { setError('No connection. Check your internet and try again.'); return false }
+    if (c === 'auth/too-many-requests' || c === 'auth/quota-exceeded' || c === 'auth/network-request-failed' || c === 'auth/unauthorized-continue-uri') { setError(mailError(e)); return false }
     // user-not-found and anything else: same answer as success
   }
   return true
@@ -138,7 +145,7 @@ export async function resendVerification(): Promise<boolean> {
   if (!u) return false
   if (!allowed('verify', 45, 5)) return false
   try { setError(null); await sendEmailVerification(u, { url: `${window.location.origin}/` }); return true }
-  catch (e) { setError(codeOf(e) === 'auth/too-many-requests' ? 'Too many emails. Try again later.' : `Could not send it (${codeOf(e) || 'unknown'})`); return false }
+  catch (e) { setError(mailError(e)); return false }
 }
 /** After opening the emailed link (here or on another device): look again, and open the workspace if the address is now confirmed. */
 export async function checkVerified(quiet = false): Promise<void> {
