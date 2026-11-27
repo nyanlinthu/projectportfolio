@@ -24,6 +24,12 @@ project manager's head. No tool shows it the way we picture it.
 ProjectPortfolio is the tool I wanted: the WBS as something you can see and arrange, where the person doing a task
 taps its status on their phone and the milestone, project and portfolio above it update by themselves.
 
+There's a second reason. Whether you are the project manager, a department manager or the board of directors, you
+sooner or later have to ask someone for a report to find out how a project is going. This tool removes that
+step. Each task rolls up into its milestone, project and portfolio, so when the team marks their tasks "Done" at the
+end of the work day, the progress is already there, and everyone who has access sees it directly. Nobody has to chase
+a report.
+
 I'm giving it back to the project-management community, for anyone with the same problem to use with their team.
 Clone it and run it yourself, or use the hosted version at
 [projectportfolio.nyanlinthu.com](https://projectportfolio.nyanlinthu.com), which is free. If its running costs ever
