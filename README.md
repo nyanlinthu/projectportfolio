@@ -70,8 +70,8 @@ Two things share the name, and they are separate on purpose:
 ![A swimlane board with Sales, Finance and Delivery lanes, a flowchart, a checklist and a sticky note, dragged as one](.github/assets/workflow.gif)
 *A swimlane board: lanes renamed to departments, shapes joined by arrows, a checklist and a sticky note that move with the board.*
 
-![A page with @ links, a page inside it, then the same cards as a board and a timeline](.github/assets/pages.gif)
-*Pages: writing with `@` links to cards, a page nested inside a page, then the same cards on the board and timeline views.*
+![A page with an @ link to a task, then a page nested inside it](.github/assets/pages.gif)
+*Pages: writing with an `@` link to a task, and a page nested inside a page.*
 
 Lane membership is only a `lane` label on each card, and the bands are drawn from it, so progress roll-up and access
 rules are untouched.
