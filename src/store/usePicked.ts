@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { CANVAS_DRAG_EVENT } from 'canvas-kit'
 import { useBoardStore } from './useBoardStore'
-import { useElementStore } from './useElementStore'
+import { isOnPool, useElementStore } from './useElementStore'
 
 /**
  * Cmd/Ctrl-click multi-selection: cards and board elements picked together, so they move (and elements delete)
@@ -93,4 +93,34 @@ if (typeof window !== 'undefined') {
 export function endGroupDrag(): void {
   carrying = null
   for (const id of usePicked.getState().ids) { const el = domOf(id); if (el) el.style.transform = '' }
+}
+
+/**
+ * While a swimlane board is carried, everything on it travels with it on screen (live), not only when it lands: the
+ * board's own drag transform is copied onto each item sitting on it. The stored positions take over at the drop.
+ */
+let poolLead: string | null = null
+let poolFollowers: string[] = []
+const relEl = (id: string): HTMLElement | null => document.querySelector<HTMLElement>(`[data-rel-id="${CSS.escape(id)}"]`)
+if (typeof window !== 'undefined') {
+  window.addEventListener(CANVAS_DRAG_EVENT, () => {
+    let lead: HTMLElement | null = null, tx = 0, ty = 0
+    for (const p of document.querySelectorAll<HTMLElement>('.wb-pool[data-rel-id]')) {
+      const m = p.style.transform.match(/translate\(([-\d.e]+)px, ([-\d.e]+)px\)/)
+      if (m && (+m[1] || +m[2])) { lead = p; tx = +m[1]; ty = +m[2]; break }
+    }
+    if (!lead) return
+    const id = lead.dataset.relId as string
+    if (poolLead !== id) {
+      poolLead = id
+      const st = useElementStore.getState(), pool = st.elements.find((e) => e.id === id)
+      poolFollowers = pool?.kind === 'pool' ? st.elements.filter((e) => isOnPool(pool, e)).map((e) => e.id) : []
+    }
+    for (const fid of poolFollowers) { const el = relEl(fid); if (el) el.style.transform = `translate(${tx}px, ${ty}px)` }
+  })
+}
+/** The board landed: drop the followers' live transforms (their stored positions take over). */
+export function endPoolDrag(): void {
+  for (const fid of poolFollowers) { const el = relEl(fid); if (el) el.style.transform = '' }
+  poolLead = null; poolFollowers = []
 }

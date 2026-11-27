@@ -1,9 +1,9 @@
 import { useCanvasDrag } from 'canvas-kit'
 import { topZ } from '@/lib/stack'
-import { useElementStore } from '@/store/useElementStore'
+import { isOnPool, useElementStore } from '@/store/useElementStore'
 import { BoardElement } from '@/types'
 import { PeerMark } from './Presence'
-import { groupMoved, pick, pickModifier, usePicked } from '@/store/usePicked'
+import { endPoolDrag, groupMoved, pick, pickModifier, usePicked } from '@/store/usePicked'
 
 export const DRAG_Z = 100000 // above any stacking value while something is being carried
 
@@ -23,7 +23,8 @@ export default function Shell({ el, selected, onTap, className, children }: Shel
       update(el.id, { x, y, z: el.kind === 'pool' ? el.z : topZ() })
       if (el.kind === 'pool') {
         for (const e of useElementStore.getState().elements)
-          if (e.id !== el.id && e.scopeId === el.scopeId && e.kind !== 'connector' && e.x >= el.x && e.y >= el.y && e.x <= el.x + el.w && e.y <= el.y + el.h) update(e.id, { x: e.x + dx, y: e.y + dy })
+          if (isOnPool(el, e)) update(e.id, { x: e.x + dx, y: e.y + dy })
+        endPoolDrag()
       }
       groupMoved(el.id, dx, dy)
     },

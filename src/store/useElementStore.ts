@@ -3,7 +3,11 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import type { ChecklistGroup } from 'canvas-kit'
 import { STORE_KEYS } from '@/lib/demo'
 import { withLiveScopes } from '@/lib/scope'
-import { BoardElement, KanbanCard, PageLink, PoolLane, TableColumn, TableRow } from '@/types'
+import { BoardElement, KanbanCard, PageLink, PoolEl, PoolLane, TableColumn, TableRow } from '@/types'
+
+/** Whether `e` sits on swimlane board `pool` (its top-left corner is inside the board): it moves with the board and goes when the board goes. */
+export const isOnPool = (pool: PoolEl, e: BoardElement): boolean =>
+  e.id !== pool.id && e.scopeId === pool.scopeId && e.kind !== 'connector' && e.x >= pool.x && e.y >= pool.y && e.x <= pool.x + pool.w && e.y <= pool.y + pool.h
 
 const newId = (): string => 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 
@@ -40,7 +44,13 @@ export const useElementStore = create<ElementStore>()(
       storageFull: false,
       add: (el) => { const id = newId(); set((s) => ({ elements: [...s.elements, { ...el, id } as BoardElement] })); return id },
       update: (id, patch) => set((s) => ({ elements: s.elements.map((e) => (e.id === id ? ({ ...e, ...patch } as BoardElement) : e)) })),
-      remove: (id) => set((s) => ({ elements: s.elements.filter((e) => e.id !== id) })),
+      // deleting a swimlane board deletes what is on it too (arrows left without an end are pruned afterwards)
+      remove: (id) => set((s) => {
+        const target = s.elements.find((e) => e.id === id)
+        const gone = new Set<string>([id])
+        if (target?.kind === 'pool') for (const e of s.elements) if (isOnPool(target, e)) gone.add(e.id)
+        return { elements: s.elements.filter((e) => !gone.has(e.id)) }
+      }),
       setZ: (z) => set((s) => ({ elements: s.elements.map((e) => (z[e.id] !== undefined && z[e.id] !== e.z ? { ...e, z: z[e.id] } : e)) })),
       prune: (live) => set((s) => {
         const scoped = withLiveScopes(live, s.elements)

@@ -399,7 +399,7 @@ export default function Whiteboard(): JSX.Element {
     const base = { scopeId, z: topZ() }
     if (t === 'text') { const id = els.add({ ...base, kind: 'text', x: cx, y: cy - 14, text: '' }); setSelectedEl(id); setTool('select'); return id }
     if (t === 'sticky') { const id = els.add({ ...base, kind: 'sticky', x: cx - 85, y: cy - 40, text: '', color: STICKY_COLORS[0] }); setSelectedEl(id); setTool('select'); return id }
-    if (t === 'shape') { const id = els.add({ ...base, kind: 'shape', shape, x: cx - 80, y: cy - 32, text: '' }); setSelectedEl(id); return id } // stays armed: flowcharts need several
+    if (t === 'shape') { const id = els.add({ ...base, kind: 'shape', shape, x: cx - 80, y: cy - 32, text: '' }); setSelectedEl(id); setTool('select'); return id } // one box per tap: pick the tool again for the next one
     if (t === 'checklist') { const id = els.add({ ...base, kind: 'checklist', x: cx - 110, y: cy - 20, groups: [{ id: 'g' + Date.now().toString(36), title: '', items: [] }] }); setSelectedEl(id); setTool('select'); return id }
     if (t === 'page') { const pid = els.add({ ...base, kind: 'page', x: cx - 100, y: cy - 30, title: '', body: '' }); setSelectedEl(pid); setTool('select'); setNamingPage(pid); return pid }
     if (t === 'table') { const id = els.add({ ...base, kind: 'table', x: cx - 200, y: cy - 20, ...starterTable() }); setSelectedEl(id); setTool('select'); return id }
