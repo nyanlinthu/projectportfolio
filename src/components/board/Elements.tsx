@@ -8,7 +8,7 @@ import { useLinks } from './LinkContext'
 import { LinkedText, NotifyAt, useMention } from './Mention'
 import { ancOf, elMentionKey } from '@/lib/scope'
 import { useBoardStore } from '@/store/useBoardStore'
-import { BoardElement, LinkEl, PageLink, ChecklistEl, ImageEl, KanbanCard, KanbanEl, PageEl, ShapeEl, StickyEl, StrokeEl, TextEl } from '@/types'
+import { BoardElement, PoolEl, LinkEl, PageLink, ChecklistEl, ImageEl, KanbanCard, KanbanEl, PageEl, ShapeEl, StickyEl, StrokeEl, TextEl } from '@/types'
 
 // Free-form whiteboard elements. Dragging uses canvas-kit's useCanvasDrag, the same hook the cards use.
 
@@ -227,12 +227,63 @@ function LinkChip({ el, selected }: { el: LinkEl; selected: boolean }): JSX.Elem
   )
 }
 
+// ---- swimlane board: a frame of lanes (rows or columns) for process flows by department / team / entity. ----------
+const laneId = (): string => 'l' + Math.random().toString(36).slice(2, 8)
+export const POOL_STEP = { w: 120, h: 80, min: { w: 360, h: 220 } }
+
+function Pool({ el, selected, onSelect }: { el: PoolEl; selected: boolean; onSelect: (id: string | null) => void }): JSX.Element {
+  const update = useElementStore((s) => s.update)
+  const setLane = (id: string, title: string): void => update(el.id, { lanes: el.lanes.map((l) => (l.id === id ? { ...l, title } : l)) })
+  const drop = (id: string): void => { if (el.lanes.length > 1) update(el.id, { lanes: el.lanes.filter((l) => l.id !== id) }) }
+  const stop = (e: React.PointerEvent): void => e.stopPropagation() // typing in a label must not start dragging the board
+  return (
+    <Shell el={el} selected={selected} className="wb-pool" onTap={() => onSelect(selected ? null : el.id)}>
+      <div className={`wb-pool-box is-${el.dir}`} style={{ width: el.w, height: el.h }}>
+        <div className="wb-pool-title" title="Drag here to move the board">
+          <span className="wb-pool-grip" aria-hidden>⠿</span>
+          <input value={el.title ?? ''} placeholder="Process or department" maxLength={60} aria-label="Swimlane board title" onPointerDown={stop}
+            onChange={(e) => update(el.id, { title: e.target.value })} />
+        </div>
+        <div className="wb-pool-lanes">
+          {el.lanes.map((l, i) => (
+            <div key={l.id} className="wb-pool-lane" style={{ '--lane': `var(--lane-${i % 6})` } as React.CSSProperties}>
+              <div className="wb-pool-head" title="Drag here to move the board">
+                <span className="wb-pool-grip" aria-hidden>⠿</span>
+                <input value={l.title} maxLength={24} aria-label={`Lane ${i + 1} name`} onPointerDown={stop} onChange={(e) => setLane(l.id, e.target.value)} />
+                {selected && el.lanes.length > 1 && <button className="wb-pool-x" title="Remove this lane" aria-label="Remove lane" onPointerDown={stop} onClick={() => drop(l.id)}>×</button>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Shell>
+  )
+}
+
+/** The row of controls above the tools while a swimlane board is selected. */
+export function PoolTools({ el }: { el: PoolEl }): JSX.Element {
+  const update = useElementStore((s) => s.update)
+  const grow = (dw: number, dh: number): void => update(el.id, { w: Math.max(POOL_STEP.min.w, el.w + dw), h: Math.max(POOL_STEP.min.h, el.h + dh) })
+  const add = (): void => update(el.id, { lanes: [...el.lanes, { id: laneId(), title: `Lane ${el.lanes.length + 1}` }], ...(el.dir === 'rows' ? { h: el.h + 140 } : { w: el.w + 220 }) })
+  return (
+    <div className="wb-pool-tools" role="group" aria-label="Swimlane board">
+      <button className="wb-ctx-btn" onClick={add} title="Add a lane">+ Lane</button>
+      <button className="wb-ctx-btn" onClick={() => update(el.id, { dir: el.dir === 'rows' ? 'cols' : 'rows', w: el.h + 120, h: el.w - 120 })} title="Switch between horizontal and vertical lanes">{el.dir === 'rows' ? '▥ Vertical' : '☰ Horizontal'}</button>
+      <button className="wb-ctx-btn" onClick={() => grow(POOL_STEP.w, 0)} title="Wider">↔ +</button>
+      <button className="wb-ctx-btn" onClick={() => grow(-POOL_STEP.w, 0)} title="Narrower">↔ −</button>
+      <button className="wb-ctx-btn" onClick={() => grow(0, POOL_STEP.h)} title="Taller">↕ +</button>
+      <button className="wb-ctx-btn" onClick={() => grow(0, -POOL_STEP.h)} title="Shorter">↕ −</button>
+    </div>
+  )
+}
+
 function Elements({ elements, selectedId, onSelect, onOpenRow, onOpenPage }: ElementsProps): JSX.Element {
   const strokes = elements.filter((e): e is StrokeEl => e.kind === 'stroke')
   return (
     <>
       {elements.map((el) => {
         const sel = el.id === selectedId
+        if (el.kind === 'pool') return <Pool key={el.id} el={el} selected={sel} onSelect={onSelect} />
         if (el.kind === 'text') return <Writable key={el.id} el={el} selected={sel} onSelect={onSelect} className="wb-text" />
         if (el.kind === 'sticky') return <Writable key={el.id} el={el} selected={sel} onSelect={onSelect} className="wb-sticky" style={{ background: el.color }} />
         if (el.kind === 'shape') return <Writable key={el.id} el={el} selected={sel} onSelect={onSelect} keepEmpty className={`wb-shape wb-shape-${el.shape}`} backdrop={<ShapeOutline shape={el.shape} />} />

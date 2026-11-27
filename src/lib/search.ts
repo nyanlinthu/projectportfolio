@@ -27,7 +27,7 @@ export interface SearchHit {
 interface Entry extends SearchHit { hay: string }
 export type SearchIndex = Entry[]
 
-const EL_LABEL: Record<string, string> = { page: 'Page', text: 'Text', sticky: 'Sticky note', shape: 'Shape', checklist: 'Checklist', kanban: 'Kanban board', table: 'Table', connector: 'Arrow' }
+const EL_LABEL: Record<string, string> = { page: 'Page', text: 'Text', sticky: 'Sticky note', shape: 'Shape', checklist: 'Checklist', kanban: 'Kanban board', pool: 'Swimlane board', table: 'Table', connector: 'Arrow' }
 
 export function buildIndex(nodes: Record<string, BoardNode>, elements: BoardElement[]): SearchIndex {
   const out: Entry[] = []
@@ -56,7 +56,10 @@ export function buildIndex(nodes: Record<string, BoardNode>, elements: BoardElem
     const base = { elementId: e.id, scopeId: e.scopeId, x: e.x, y: e.y, context: pathOf(e.scopeId) }
     const kind = EL_LABEL[e.kind] ?? e.kind
     if (e.kind === 'text' || e.kind === 'sticky' || e.kind === 'shape') { if (e.text) push({ ...base, key: e.id, kind, title: e.text }) }
-    else if (e.kind === 'page') push({ ...base, key: e.id, kind, title: e.title || 'Untitled' }, e.body)
+    else if (e.kind === 'pool') {
+      if (e.title) push({ ...base, key: e.id, kind, title: e.title })
+      for (const l of e.lanes) if (l.title) push({ ...base, key: `${e.id}:${l.id}`, kind: 'Swimlane', title: l.title, context: [base.context, e.title].filter(Boolean).join(' › ') })
+    } else if (e.kind === 'page') push({ ...base, key: e.id, kind, title: e.title || 'Untitled' }, e.body)
     else if (e.kind === 'connector') { if (e.label) push({ ...base, key: e.id, kind, title: e.label, x: undefined, y: undefined }) }
     else if (e.kind === 'checklist') {
       for (const g of e.groups) {

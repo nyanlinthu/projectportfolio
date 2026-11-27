@@ -120,5 +120,9 @@ export interface TableEl extends ElementBase { kind: 'table'; title?: string; co
 export interface PageEl extends ElementBase { kind: 'page'; title: string; body: string; links?: PageLink[]; kit?: string }
 /** A link dropped on the board with @: points at anything in the search index by its key; tap it to go there. */
 export interface LinkEl extends ElementBase { kind: 'link'; key: string; title: string }
-export type BoardElement = LinkEl | TextEl | StickyEl | StrokeEl | ImageEl | KanbanEl | ChecklistEl | ShapeEl | ConnectorEl | TableEl | PageEl
-export type Tool = 'select' | 'text' | 'sticky' | 'checklist' | 'shape' | 'connect' | 'draw' | 'erase' | 'kanban' | 'table' | 'page'
+/** A swimlane board (draw.io "pool"): a titled frame split into lanes, for process flows by department / team / entity.
+ *  Notes, shapes, checklists and arrows are placed on top of it like anywhere else, and move with it when it is dragged. */
+export interface PoolLane { id: string; title: string }
+export interface PoolEl extends ElementBase { kind: 'pool'; title?: string; dir: 'rows' | 'cols'; w: number; h: number; lanes: PoolLane[] }
+export type BoardElement = PoolEl | LinkEl | TextEl | StickyEl | StrokeEl | ImageEl | KanbanEl | ChecklistEl | ShapeEl | ConnectorEl | TableEl | PageEl
+export type Tool = 'select' | 'text' | 'sticky' | 'checklist' | 'shape' | 'connect' | 'draw' | 'erase' | 'kanban' | 'table' | 'page' | 'pool'

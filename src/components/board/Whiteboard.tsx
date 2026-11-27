@@ -22,6 +22,7 @@ import AdminSheet from './AdminSheet'
 import InboxSheet, { useInbox } from './InboxSheet'
 import BoardCard from './BoardCard'
 import LaneBar from './LaneBar'
+import { PoolTools } from './Elements'
 import Elements from './Elements'
 import InlineEditor, { NEW_CARD_ID } from './InlineEditor'
 import { LinkProvider } from './LinkContext'
@@ -57,13 +58,13 @@ const GLIDE_MS = 360 // keep in sync with `.wb-inner [data-canvas-id]` transitio
 const noop = (): void => undefined
 const BRANCH_MS = 380, BRANCH_STEP = 22, BRANCH_STEPS = 8
 /** Tools that put one thing on the board where you tap (the others are modes: draw, erase, connect, select). */
-const PLACING = new Set<Tool>(['text', 'sticky', 'shape', 'checklist', 'page', 'table', 'kanban'])
+const PLACING = new Set<Tool>(['text', 'sticky', 'shape', 'checklist', 'page', 'table', 'kanban', 'pool'])
 /** Roughly how much room each new thing takes, for finding it a free spot (canvas units). */
 /** dx/dy = where its top-left sits relative to the point placeTool is given (keep in step with placeTool). */
 const PLACE_SIZE: Partial<Record<Tool, { w: number; h: number; dx: number; dy: number }>> = {
   text: { w: 180, h: 44, dx: 0, dy: -14 }, sticky: { w: 180, h: 120, dx: -85, dy: -40 }, shape: { w: 170, h: 70, dx: -80, dy: -32 },
   checklist: { w: 230, h: 140, dx: -110, dy: -20 }, page: { w: 210, h: 90, dx: -100, dy: -30 },
-  table: { w: 420, h: 190, dx: -200, dy: -20 }, kanban: { w: 340, h: 220, dx: -160, dy: -20 },
+  table: { w: 420, h: 190, dx: -200, dy: -20 }, kanban: { w: 340, h: 220, dx: -160, dy: -20 }, pool: { w: 760, h: 420, dx: -380, dy: -20 },
 }
 const DOUBLE_TAP_MS = 250
 /** One colour per unfolded branch, readable on the navy board; a second open project never shares the first's. */
@@ -186,10 +187,14 @@ export default function Whiteboard(): JSX.Element {
   // where each card is drawn: stored placement plus the room opened branches make (lib/board.ts displayLayout)
   // Swimlanes (the toolbar's lanes button): the open card's children grouped into lanes, as rows or as columns.
   // Remembered on this device; each card's own `lane` and its parent's `lanes` / `laneDir` are what is shared.
-  const [lanesOn, setLanesOn] = useState(() => { try { return localStorage.getItem(`${STORE_KEYS.view}-lanes`) === '1' } catch { return false } })
-  const toggleLanes = useCallback(() => setLanesOn((v) => { const n = !v; try { localStorage.setItem(`${STORE_KEYS.view}-lanes`, n ? '1' : '0') } catch { /* private mode */ } return n }), [])
+  // On unless switched off. The lane bar shows whenever it is on, so lanes can be added at any level; the cards are only
+  // arranged into bands once the open card has lanes (or a child names one). Remembered on this device.
+  const [lanesOn, setLanesOn] = useState(() => { try { return localStorage.getItem(`${STORE_KEYS.view}-lanes-v2`) !== '0' } catch { return true } })
+  const toggleLanes = useCallback(() => setLanesOn((v) => { const n = !v; try { localStorage.setItem(`${STORE_KEYS.view}-lanes-v2`, n ? '1' : '0') } catch { /* private mode */ } return n }), [])
   const laneDir: LaneDir = focus.laneDir === 'cols' ? 'cols' : 'rows'
-  const laneMode = lanesOn && !page && viewMode === 'tree'
+  const laneBar = lanesOn && !page && viewMode === 'tree'
+  const hasLanes = (focus.lanes?.length ?? 0) > 0 || (board.kids.get(focus.id) ?? []).some((c) => !!c.lane)
+  const laneMode = laneBar && hasLanes
   const laneModeRef = useRef(laneMode); laneModeRef.current = laneMode
   // real card heights (title length varies), so a lane ends just below its tallest card's chips
   const [heights, setHeights] = useState<Record<string, number>>({})
@@ -315,7 +320,7 @@ export default function Whiteboard(): JSX.Element {
     // cards when a card is open; the page's own elements when a page is open
     const boxes = page
       ? [...(page.kind === 'page' ? [{ x: PAGE_DOC.x, y: PAGE_DOC.y, w: PAGE_DOC.w, h: 260 }] : []),
-        ...useElementStore.getState().elements.filter((e) => e.scopeId === page.key && e.kind !== 'connector' && e.kind !== 'stroke').map((e) => ({ x: e.x, y: e.y, w: e.kind === 'table' || e.kind === 'kanban' ? 640 : 220, h: 180 }))]
+        ...useElementStore.getState().elements.filter((e) => e.scopeId === page.key && e.kind !== 'connector' && e.kind !== 'stroke').map((e) => ({ x: e.x, y: e.y, w: e.kind === 'pool' ? e.w : e.kind === 'table' || e.kind === 'kanban' ? 640 : 220, h: e.kind === 'pool' ? e.h : 180 }))]
       : (() => { const lay = laneModeRef.current ? laneLayout(shown[focus.id] ?? focus, deriveBoard(shown).kids, wrapRef.current, (shown[focus.id] ?? focus).laneDir === 'cols' ? 'cols' : 'rows').pos : displayLayout(shown[focus.id] ?? focus, deriveBoard(shown).kids, wrapRef.current); return [...visible].map((id) => shown[id]).filter(Boolean).map((n) => ({ ...(lay[n.id] ?? { x: n.x, y: n.y }), w: CARD_W, h: CARD_H })) })()
     if (!boxes.length) return
     const minX = Math.min(...boxes.map((n) => n.x)), maxX = Math.max(...boxes.map((n) => n.x + n.w))
@@ -398,6 +403,7 @@ export default function Whiteboard(): JSX.Element {
     if (t === 'checklist') { const id = els.add({ ...base, kind: 'checklist', x: cx - 110, y: cy - 20, groups: [{ id: 'g' + Date.now().toString(36), title: '', items: [] }] }); setSelectedEl(id); setTool('select'); return id }
     if (t === 'page') { const pid = els.add({ ...base, kind: 'page', x: cx - 100, y: cy - 30, title: '', body: '' }); setSelectedEl(pid); setTool('select'); setNamingPage(pid); return pid }
     if (t === 'table') { const id = els.add({ ...base, kind: 'table', x: cx - 200, y: cy - 20, ...starterTable() }); setSelectedEl(id); setTool('select'); return id }
+    if (t === 'pool') { const id = els.add({ ...base, z: 0, kind: 'pool', x: cx - 380, y: cy - 20, dir: 'rows', w: 760, h: 420, title: '', lanes: [1, 2, 3].map((n) => ({ id: 'l' + Date.now().toString(36) + n, title: `Lane ${n}` })) }); setSelectedEl(id); setTool('select'); return id }
     if (t === 'kanban') { const id = els.add({ ...base, kind: 'kanban', x: cx - 160, y: cy - 20, cards: [] }); setSelectedEl(id); setTool('select'); return id }
   }
   /**
@@ -409,7 +415,7 @@ export default function Whiteboard(): JSX.Element {
     const c = canvasRef.current, inner = stageRef.current?.querySelector('.wb-inner')
     if (!c || !inner) return at
     const o = inner.getBoundingClientRect(), z = c.zoom, GAP = 16
-    const taken = [...inner.querySelectorAll<HTMLElement>('.wb-node:not(.is-leaving), .wb-el, .wb-editor')].filter((el) => !ignore || el.dataset.relId !== ignore).map((el) => {
+    const taken = [...inner.querySelectorAll<HTMLElement>('.wb-node:not(.is-leaving), .wb-el:not(.wb-pool), .wb-editor')].filter((el) => !ignore || el.dataset.relId !== ignore).map((el) => {
       const r = el.getBoundingClientRect()
       return { l: (r.left - o.left) / z - GAP, t: (r.top - o.top) / z - GAP, r: (r.right - o.left) / z + GAP, b: (r.bottom - o.top) / z + GAP }
     })
@@ -928,7 +934,8 @@ export default function Whiteboard(): JSX.Element {
     return out
   }, [focus, board])
   const context: JSX.Element[] = []
-  if (laneMode && editable) context.push(<LaneBar key="lanes" names={laneNames(focus, board.kids)} counts={laneCounts} dir={laneDir} onDir={(d) => updateNode(focus.id, { laneDir: d })} onEdit={onLaneEdit} onDone={toggleLanes} />)
+  if (selectedElement?.kind === 'pool' && editable) context.push(<PoolTools key="pool" el={selectedElement} />)
+  if (laneBar && editable) context.push(<LaneBar key="lanes" names={laneNames(focus, board.kids)} counts={laneCounts} dir={laneDir} onDir={(d) => updateNode(focus.id, { laneDir: d })} onEdit={onLaneEdit} onDone={toggleLanes} />)
   if (tool === 'connect') context.push(<span key="hint" className="wb-context-hint">{connectFrom ? 'Now tap what it points to' : 'Tap where the arrow starts'}</span>)
   else if (tool === 'shape') context.push(
     <div key="shapes" className="wb-swatches" role="group" aria-label="Shape">
@@ -1019,7 +1026,7 @@ export default function Whiteboard(): JSX.Element {
 
       <div ref={areaRef} className="wb-area" onPointerDownCapture={(e) => { if (moreBelow && !(e.target as HTMLElement).closest('.wb-more-below')) setMoreBelow(null) }}>
         {moreBelow && moreBelow.n > 0 && <button className="wb-more-below" onClick={scrollDown}>▾ {moreBelow.n} more below</button>}
-        <div ref={stageRef} className={`wb-stage ${tool === 'text' || tool === 'sticky' || tool === 'checklist' || tool === 'shape' || tool === 'kanban' || tool === 'table' || tool === 'page' ? 'is-placing' : ''}`}>
+        <div ref={stageRef} className={`wb-stage ${tool === 'text' || tool === 'sticky' || tool === 'checklist' || tool === 'shape' || tool === 'kanban' || tool === 'pool' || tool === 'table' || tool === 'page' ? 'is-placing' : ''}`}>
         <MobileCanvas ref={canvasRef} className="wb-canvas" initialView={initialView} onCanvasTap={onCanvasTap}>
           <div className="wb-dots" />
           <div className="canvas-inner wb-inner">
@@ -1081,7 +1088,7 @@ export default function Whiteboard(): JSX.Element {
           {DEMO && <div className="wb-demo-note">Demo with example data. Change anything: it is saved in this browser only.</div>}
           {storageFull && <div className="wb-full">This browser's storage is full, so the latest change was not saved. Delete an image to free space.</div>}
           {session.notice && <div className="wb-notice" role="status">{session.notice}</div>}
-          {editable && <Toolbar lanesOn={laneMode} onLanes={treeView && !page && viewMode === 'tree' ? toggleLanes : undefined} tool={tool} onTool={onTool} onImage={(f) => void addImage(f)} context={context.length ? context : undefined}
+          {editable && <Toolbar lanesOn={laneBar} onLanes={treeView && !page && viewMode === 'tree' ? toggleLanes : undefined} tool={tool} onTool={onTool} onImage={(f) => void addImage(f)} context={context.length ? context : undefined}
             canDelete={!!selectedElement} onDelete={() => { if (selectedEl) useElementStore.getState().remove(selectedEl); setSelectedEl(null) }} />}
         </div>
 

@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Eraser, FileText, Image as ImageIcon, Kanban, ListChecks, MousePointer2, MoveUpRight, Pencil, Rows3, Shapes, StickyNote, Table2, Trash2, Type } from 'lucide-react'
+import { Eraser, FileText, Image as ImageIcon, Kanban, LayoutPanelTop, ListChecks, MousePointer2, MoveUpRight, Pencil, Rows3, Shapes, StickyNote, Table2, Trash2, Type } from 'lucide-react'
 import { Tool } from '@/types'
 
 interface ToolbarProps {
@@ -25,6 +25,7 @@ const TOOLS: { id: Tool; label: string; Icon: typeof Type }[] = [
   { id: 'connect', label: 'Arrow: tap one item, then the item it points to', Icon: MoveUpRight },
   { id: 'draw', label: 'Draw', Icon: Pencil },
   { id: 'erase', label: 'Erase drawing', Icon: Eraser },
+  { id: 'pool', label: 'Swimlane board: tap the board to place (process flows by department, team or entity)', Icon: LayoutPanelTop },
   { id: 'kanban', label: 'Kanban board: tap the board to place', Icon: Kanban },
   { id: 'table', label: 'Table (database + formulas): tap the board to place', Icon: Table2 },
 ]

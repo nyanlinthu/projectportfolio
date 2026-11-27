@@ -3,13 +3,13 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import type { ChecklistGroup } from 'canvas-kit'
 import { STORE_KEYS } from '@/lib/demo'
 import { withLiveScopes } from '@/lib/scope'
-import { BoardElement, KanbanCard, PageLink, TableColumn, TableRow } from '@/types'
+import { BoardElement, KanbanCard, PageLink, PoolLane, TableColumn, TableRow } from '@/types'
 
 const newId = (): string => 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 
 // Distributive, so each element kind keeps its own fields when `id` is left out.
 type NewElement = BoardElement extends infer E ? (E extends BoardElement ? Omit<E, 'id'> : never) : never
-type ElementPatch = { text?: string; color?: string; x?: number; y?: number; z?: number; groups?: ChecklistGroup[]; cards?: KanbanCard[]; title?: string; label?: string; columns?: TableColumn[]; rows?: TableRow[]; body?: string; links?: PageLink[] }
+type ElementPatch = { text?: string; color?: string; x?: number; y?: number; z?: number; groups?: ChecklistGroup[]; cards?: KanbanCard[]; title?: string; label?: string; columns?: TableColumn[]; rows?: TableRow[]; body?: string; links?: PageLink[]; w?: number; h?: number; dir?: 'rows' | 'cols'; lanes?: PoolLane[] }
 
 interface ElementStore {
   elements: BoardElement[]

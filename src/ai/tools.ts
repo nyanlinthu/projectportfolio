@@ -62,6 +62,7 @@ function describeElement(e: BoardElement): Record<string, unknown> {
       rows: e.rows.map((r, ri) => ({ row: ri + 1, values: Object.fromEntries(e.columns.map((c, ci) => [c.name || `col${ci + 1}`, display(computed[ri][ci])])),
         formulas: Object.fromEntries(e.columns.filter((c) => (r.cells[c.id] ?? '').startsWith('=')).map((c) => [c.name, r.cells[c.id]])), page_text: rowBody(r), links: (r.links ?? []).map((l) => l.title) })) }
   }
+  if (e.kind === 'pool') return { ...base, title: e.title ?? '', direction: e.dir === 'rows' ? 'horizontal lanes' : 'vertical lanes', lanes: e.lanes.map((l) => l.title), width: e.w, height: e.h }
   if (e.kind === 'page') return { ...base, title: e.title, text: e.body, links: (e.links ?? []).map((l) => l.title) }
   if (e.kind === 'link') return { ...base, links_to: e.key, title: e.title }
   if (e.kind === 'connector') return { ...base, from_id: e.fromId, to_id: e.toId, label: e.label ?? '' }
@@ -79,7 +80,7 @@ const TOOLS: Tool[] = [
       work_items: 'A tree: portfolio > project > milestone > task (tasks may have sub-tasks). Only tasks without sub-tasks carry a status. Progress and health of everything above are derived from task status and are never set directly.',
       task_statuses: STATUS_IDS,
       task_priorities: 'Eisenhower disposition of a task, or null when not sorted yet: ' + PRIORITIES.map((p) => `${p.id} (${p.hint.toLowerCase()})`).join(', ') + '. Independent of status; a done task keeps its priority.',
-      board_elements: 'Free-form things placed on a work item\'s board: page (title + text + @links), text, sticky, shape, checklist, kanban (its own cards, independent of tasks), table (typed properties; each row is a page; text/number cells may be "=formulas" with A1 references and can read their card via PROGRESS(), TASKS(), DONE(), CARD()), connector (an arrow between any two items), image, stroke.',
+      board_elements: 'Free-form things placed on a work item\'s board: page (title + text + @links), pool (a swimlane board: lanes for process flows by department / team; other items sit on top of it), text, sticky, shape, checklist, kanban (its own cards, independent of tasks), table (typed properties; each row is a page; text/number cells may be "=formulas" with A1 references and can read their card via PROGRESS(), TASKS(), DONE(), CARD()), connector (an arrow between any two items), image, stroke.',
       ids: 'Every work item and element has an id. The portfolio id is "' + ROOT_ID + '".',
     }),
   },

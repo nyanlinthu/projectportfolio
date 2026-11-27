@@ -121,7 +121,7 @@ export function deriveBoard(nodes: Record<string, BoardNode>, asOf: string = tod
   return { r, kids, view }
 }
 
-const SLOT_W = 204, LEVEL_H = 150
+const SLOT_W = 250, LEVEL_H = 170 // roomy on purpose: cards never crowd their neighbours' + and ▸ chips
 
 /**
  * Where a new child's editor opens: one level below its parent, to the right of the right-most sibling, at every
@@ -144,7 +144,7 @@ export function nextChildSpot(parent: BoardNode, kids: ChildMap, wrap = COMPACT_
 }
 
 /** Row pitch of a wrapped grid of cards (a card plus its fold badge and a gap). */
-const ROW_H = 160
+const ROW_H = 200
 
 /** How many cards across still read comfortably on a screen this wide: 2 on a phone, up to 5 on a desktop. */
 export const wrapFor = (screenW: number): number => Math.max(2, Math.min(COMPACT_MAX, Math.floor((screenW - 32) / (SLOT_W * 0.85))))
