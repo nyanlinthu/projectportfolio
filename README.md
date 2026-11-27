@@ -53,8 +53,6 @@ become significant, I may charge for the hosted version to cover them. The code 
 
 ### Swimlanes
 
-![Swimlanes: cards snap into lanes, the lanes flip between rows and columns, and a swimlane board carries what is on it](.github/assets/swimlanes.gif)
-
 Two things share the name, and they are separate on purpose:
 
 - **Lanes for your cards.** Under any open card (the portfolio, a project, a milestone), the children can sit in lanes:
