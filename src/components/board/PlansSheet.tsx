@@ -22,6 +22,9 @@ interface PlansSheetProps {
 export default function PlansSheet({ project, canEdit, openId, onOpenRow, onClose }: PlansSheetProps): JSX.Element {
   const elements = useElementStore((s) => s.elements)
   const update = useElementStore((s) => s.update)
+  const remove = useElementStore((s) => s.remove)
+  /** the plan whose ✕ was tapped once: a second tap removes it (no browser dialog) */
+  const [removing, setRemoving] = useState<string | null>(null)
   const plans = useMemo(() => plansOf(project.id, elements), [project.id, elements])
   const [open, setOpen] = useState<string | null>(openId ?? null)
   const [adding, setAdding] = useState(false)
@@ -56,12 +59,16 @@ export default function PlansSheet({ project, canEdit, openId, onOpenRow, onClos
               {plans.map((p) => {
                 const t = templateOf(p.kit)
                 return (
-                  <li key={p.id}>
-                    <button onClick={() => setOpen(p.id)}>
+                  <li key={p.id} className="wb-plans-row">
+                    <button onClick={() => { setRemoving(null); setOpen(p.id) }}>
                       <i className={`wb-plans-dot ${isStarted(p) ? 'is-on' : ''}`} aria-label={isStarted(p) ? 'Started' : 'Not started'} />
                       <span className="wb-plans-name">{('title' in p && p.title) || t?.title}<small>{t?.hint}</small></span>
                       <span className="wb-plans-area">{t?.area}<small>{t?.domain}</small></span>
                     </button>
+                    {canEdit && (removing === p.id
+                      ? <button className="wb-plans-rm is-sure" onClick={() => { remove(p.id); setRemoving(null) }}
+                          title={isStarted(p) ? 'Removes this plan and everything written in it' : 'Removes this plan'}>Remove</button>
+                      : <button className="wb-plans-rm" onClick={() => setRemoving(p.id)} aria-label={`Remove ${('title' in p && p.title) || t?.title}`} title="Remove this plan">✕</button>)}
                   </li>
                 )
               })}
