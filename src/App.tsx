@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import Whiteboard from '@/components/board/Whiteboard'
-import SignIn, { Splash } from '@/components/SignIn'
+import SignIn, { Splash, VerifyEmail } from '@/components/SignIn'
 import { signOut, watchSession } from '@/services/cloud'
 import { useSession } from '@/store/useSession'
 import './App.css'
@@ -12,6 +12,7 @@ export default function App(): JSX.Element {
 
   if (status === 'local' || status === 'ready') return <Whiteboard />
   if (status === 'signed-out') return <SignIn />
+  if (status === 'unverified') return <VerifyEmail />
   if (status === 'error') {
     return (
       <main className="wb-gate"><div className="wb-gate-card">

@@ -788,3 +788,85 @@ body.is-linking .wb-vtime-lane:hover { background-color: rgba(201,166,75,.08); }
 .wb-pool-div.is-cols::after { top: 0; bottom: 0; left: 6px; width: 2px; }
 .wb-pool-div:hover::after, .wb-pool-div:active::after { opacity: 1; }
 .wb-lane-note { font: 400 12px var(--sans); font-style: normal; letter-spacing: 0; text-transform: none; color: var(--gray); }
+
+/* ---- sign-in page: depth, shade, and a picture of what the product is ---- */
+.wb-hero { position: relative; overflow: auto; height: 100%; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(340px, 440px); gap: clamp(20px, 5vw, 84px); align-items: center; justify-content: center; padding: clamp(16px, 4vw, 56px);
+  background: radial-gradient(900px 520px at 10% 6%, rgba(201,166,75,.20), transparent 62%), radial-gradient(900px 620px at 96% 92%, rgba(127,179,213,.18), transparent 62%), radial-gradient(1400px 900px at 50% 130%, rgba(5,10,26,.75), transparent 70%), var(--bg); }
+.wb-hero::before { content: ''; position: fixed; inset: 0; pointer-events: none; background-image: radial-gradient(rgba(245,239,226,.10) 1px, transparent 1.4px); background-size: 28px 28px; -webkit-mask-image: radial-gradient(ellipse at center, #000 25%, transparent 80%); mask-image: radial-gradient(ellipse at center, #000 25%, transparent 80%); }
+.wb-hero > * { position: relative; }
+.wb-hero.is-narrow { grid-template-columns: minmax(0, 440px); }
+.wb-hero .wb-gate-card { width: auto; max-width: 440px; justify-self: center; border-radius: 12px; border: 1px solid rgba(245,239,226,.10); border-top: 3px solid var(--gold);
+  background: linear-gradient(180deg, var(--panel-hi) 0%, var(--panel) 60%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 34px 64px -14px rgba(3,8,22,.85), 0 12px 26px rgba(3,8,22,.5); }
+.wb-hero .wb-gate-btn { box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 6px 14px rgba(3,8,22,.45); transition: transform .12s, box-shadow .12s; border-radius: 6px; }
+.wb-hero .wb-gate-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 10px 18px rgba(3,8,22,.5); }
+.wb-hero .wb-gate-btn:active:not(:disabled) { transform: translateY(1px); }
+.wb-hero .wb-gate-btn.is-quiet { box-shadow: none; }
+.wb-hero .wb-gate-form input { border-radius: 6px; box-shadow: 0 2px 6px rgba(3,8,22,.35) inset; }
+.wb-gate-fine { font-size: 13px !important; line-height: 1.45 !important; }
+.wb-gate-addr { color: var(--cream); word-break: break-all; }
+.wb-gate-tabs { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; }
+.wb-gate-tabs button { min-height: 38px; background: none; border: 0; border-radius: 6px; color: var(--gray); font: 600 14px var(--sans); cursor: pointer; }
+.wb-gate-tabs button.is-on { background: var(--panel-hi); color: var(--cream); box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 2px 6px rgba(3,8,22,.4); }
+.wb-gate-pw { position: relative; display: grid; }
+.wb-gate-pw input { padding-right: 64px; }
+.wb-gate-eye { position: absolute; right: 6px; top: 6px; bottom: 6px; padding: 0 10px; background: none; border: 0; color: var(--gold); font: 600 12px var(--sans); cursor: pointer; }
+.wb-gate-links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.wb-gate-links button { min-height: 32px; padding: 0; background: none; border: 0; color: var(--gold); font: 500 13px var(--sans); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.wb-google { background: linear-gradient(180deg, #D8B659, var(--gold)); }
+
+.wb-stage3d { --mx: 0; --my: 0; --fs: .8; perspective: 1300px; display: grid; place-items: center; min-height: 680px; }
+.wb-fan { position: relative; width: 660px; height: 840px; transform-style: preserve-3d; transform: scale(var(--fs, 1)) rotateX(calc(var(--my) * -5deg)) rotateY(calc(var(--mx) * 8deg)); transition: transform .3s ease-out; }
+.wb-tile { position: absolute; width: 310px; margin: 0; padding: 11px 11px 9px; border-radius: 14px; backface-visibility: hidden; animation: wb-float 7s ease-in-out infinite;
+  background: linear-gradient(155deg, rgba(36,68,116,.96), rgba(22,41,78,.96)); border: 1px solid rgba(245,239,226,.13);
+  box-shadow: 0 1px 0 rgba(255,255,255,.12) inset, 0 -1px 0 rgba(0,0,0,.25) inset, 0 44px 64px -22px rgba(2,6,18,.9), 0 16px 28px rgba(2,6,18,.5); }
+.wb-tile svg { display: block; width: 100%; height: auto; }
+.wb-tile figcaption { margin-top: 6px; font: 12px var(--sans); color: var(--gray); }
+.wb-tile figcaption b { display: block; color: var(--cream); font: 600 13px var(--sans); }
+.wb-tile-a { left: 0; top: 0; transform: translateZ(70px) rotateY(13deg) rotateX(4deg) rotateZ(-2deg); }
+.wb-tile-b { left: 340px; top: 70px; transform: translateZ(30px) rotateY(10deg) rotateX(3deg) rotateZ(1.5deg); animation-delay: -2.1s; }
+.wb-tile-e { left: 10px; top: 285px; transform: translateZ(60px) rotateY(12deg) rotateX(3deg) rotateZ(-1.5deg); animation-delay: -3.3s; }
+.wb-tile-d { left: 345px; top: 350px; transform: translateZ(40px) rotateY(9deg) rotateX(3deg) rotateZ(1deg); animation-delay: -4.5s; }
+.wb-tile-c { left: 170px; top: 590px; transform: translateZ(70px) rotateY(11deg) rotateX(3deg) rotateZ(-1deg); animation-delay: -5.6s; }
+@keyframes wb-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
+.wb-tile .nd { fill: #1F3B69; stroke: rgba(245,239,226,.18); stroke-width: 1; }
+.wb-tile .nd.sm { fill: #1B3563; }
+.wb-tile .ln path { fill: none; stroke: rgba(245,239,226,.24); stroke-width: 1.5; }
+.wb-tile .ac.gold, .wb-tile .fill.gold { fill: #C9A64B; }
+.wb-tile .ac.green, .wb-tile .fill.green { fill: #92A524; }
+.wb-tile .ac.orange, .wb-tile .fill.orange { fill: #D9822B; }
+.wb-tile .tt { font: 600 8px var(--mono); letter-spacing: .1em; fill: #8A93A6; }
+.wb-tile .pc { font: 500 8px var(--mono); fill: #8A93A6; }
+.wb-tile .bar { fill: rgba(245,239,226,.13); }
+.wb-tile .dot { fill: rgba(245,239,226,.28); }
+.wb-tile .dot.ok { fill: #92A524; }
+.wb-tile .tx { fill: rgba(245,239,226,.36); }
+.wb-tile .lab { font: 700 9px var(--mono); letter-spacing: .14em; }
+.wb-tile .st1 { fill: #E8C96A; } .wb-tile .st2 { fill: #7FB3D5; }
+.wb-tile .st { filter: drop-shadow(0 6px 6px rgba(0,0,0,.35)); }
+.wb-tile .st ~ .tx { fill: rgba(22,41,78,.5); }
+.wb-tile .box { fill: none; stroke: rgba(245,239,226,.45); stroke-width: 1.5; }
+.wb-tile .box.on { fill: #92A524; stroke: #92A524; }
+.wb-tile .chk path { fill: none; stroke: #16294E; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 920px) {
+  .wb-hero { grid-template-columns: minmax(0, 440px); align-content: start; gap: 14px; }
+  /* on a phone the three tiles are a row you can swipe, flat and full size */
+  .wb-stage3d { order: -1; min-height: 0; height: auto; perspective: none; width: 100%; max-width: 440px; justify-self: center; }
+  .wb-fan { width: 100%; height: auto; transform: none !important; display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 6px 2px 16px; scrollbar-width: none; }
+  .wb-fan::-webkit-scrollbar { display: none; }
+  .wb-tile { position: static; flex: 0 0 min(80%, 300px); transform: none !important; animation: none; scroll-snap-align: center; }
+}
+@media (prefers-reduced-motion: reduce) { .wb-tile { animation: none; } .wb-fan { transition: none; } .wb-hero .wb-gate-btn { transition: none; } }
+
+.wb-tile .pgbox { fill: #223F6C; stroke: rgba(245,239,226,.2); }
+.wb-tile .tx.hd { fill: rgba(245,239,226,.62); }
+.wb-tile .chip { fill: rgba(201,166,75,.22); stroke: #C9A64B; stroke-width: 1; }
+.wb-tile .chip.lk { fill: rgba(127,179,213,.22); stroke: #7FB3D5; }
+.wb-tile .chipt { font: 600 9px var(--sans); fill: #F5EFE2; }
+.wb-tile .embed { fill: #1B3563; stroke: rgba(245,239,226,.28); stroke-dasharray: 3 3; }
+.wb-tile .fold { fill: rgba(245,239,226,.16); }
+.wb-tile .shp { fill: #1F3B69; stroke: rgba(245,239,226,.5); stroke-width: 1.4; }
+.wb-tile .shpt { font: 600 9px var(--sans); fill: #F5EFE2; }
+.wb-tile .arw path { fill: none; stroke: rgba(245,239,226,.6); stroke-width: 1.5; }
+.wb-tile .ah { fill: rgba(245,239,226,.7); }
+.wb-tile .ink { fill: none; stroke: #E59A8C; stroke-width: 3; stroke-linecap: round; }

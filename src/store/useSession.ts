@@ -9,7 +9,7 @@ export interface SessionUser { uid: string; email: string; name: string; provide
 
 interface Session {
   /** local = no project configured; the board lives in this browser only */
-  status: 'local' | 'loading' | 'signed-out' | 'opening' | 'ready' | 'error'
+  status: 'local' | 'loading' | 'signed-out' | 'unverified' | 'opening' | 'ready' | 'error'
   user: SessionUser | null
   workspaces: WorkspaceRef[]
   workspaceId: string | null

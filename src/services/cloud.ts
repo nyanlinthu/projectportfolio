@@ -1,5 +1,6 @@
 import {
-  GoogleAuthProvider, isSignInWithEmailLink, onAuthStateChanged, sendSignInLinkToEmail, signInWithCredential, signInWithEmailLink, signInWithPopup,
+  createUserWithEmailAndPassword, GoogleAuthProvider, isSignInWithEmailLink, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, sendSignInLinkToEmail,
+  signInWithCredential, signInWithEmailAndPassword, signInWithEmailLink, signInWithPopup,
   signOut as fbSignOut, User,
 } from 'firebase/auth'
 import {
@@ -44,6 +45,7 @@ export async function sendEmailLink(email: string): Promise<boolean> {
   if (!auth) return false
   const clean = email.trim().toLowerCase()
   if (!EMAIL_RE.test(clean)) { useSession.setState({ error: 'That does not look like an email address.' }); return false }
+  if (!allowed('link', 45, 4)) return false
   try {
     await sendSignInLinkToEmail(auth, clean, { url: `${window.location.origin}/`, handleCodeInApp: true })
     localStorage.setItem(LINK_EMAIL, clean)
@@ -55,6 +57,100 @@ export async function sendEmailLink(email: string): Promise<boolean> {
     return false
   }
 }
+// ---- email + password --------------------------------------------------------------------------------------
+// Everything that sends an email or guesses a password goes through `allowed`: a brake kept in this browser (at least
+// `gapS` seconds apart, at most `max` an hour). It stops a stuck button or a script on one device; the project-wide
+// sign-up quota and Firebase's own per-address limits are the server side of the same protection.
+export const PASSWORD_MIN = 8
+const BRAKE = 'projectportfolio-brake-'
+const waitText = (s: number): string => (s >= 90 ? `${Math.ceil(s / 60)} minutes` : `${s} seconds`)
+function allowed(action: string, gapS: number, max: number): boolean {
+  const now = Date.now()
+  let list: number[] = []
+  try { list = (JSON.parse(localStorage.getItem(BRAKE + action) ?? '[]') as number[]).filter((t) => now - t < 3_600_000) } catch { list = [] }
+  const sinceLast = list.length ? (now - list[list.length - 1]) / 1000 : Infinity
+  let wait = 0
+  if (sinceLast < gapS) wait = Math.ceil(gapS - sinceLast)
+  else if (list.length >= max) wait = Math.ceil((3_600_000 - (now - list[0])) / 1000)
+  if (wait > 0) { useSession.setState({ error: `Please wait ${waitText(wait)} and try again.` }); return false }
+  list.push(now)
+  try { localStorage.setItem(BRAKE + action, JSON.stringify(list)) } catch { /* private mode: the server limits still apply */ }
+  return true
+}
+const codeOf = (e: unknown): string => (e as { code?: string } | null)?.code ?? ''
+const setError = (error: string | null): void => useSession.setState({ error })
+
+/** Make an account with an address and a password. The address is confirmed by an emailed link before anyone gets in. */
+export async function signUpWithPassword(email: string, password: string): Promise<boolean> {
+  if (!auth) return false
+  const clean = email.trim().toLowerCase()
+  if (!EMAIL_RE.test(clean)) { setError('That does not look like an email address.'); return false }
+  if (password.length < PASSWORD_MIN) { setError(`Use at least ${PASSWORD_MIN} characters for the password.`); return false }
+  if (!allowed('signup', 20, 5)) return false
+  try {
+    setError(null)
+    const cred = await createUserWithEmailAndPassword(auth, clean, password)
+    try { await sendEmailVerification(cred.user, { url: `${window.location.origin}/` }) } catch { /* the next screen has "Send it again" */ }
+    return true
+  } catch (e) {
+    const c = codeOf(e)
+    setError(c === 'auth/email-already-in-use' ? 'That address already has an account. Sign in, or use "Forgot password" to set a password.'
+      : c === 'auth/weak-password' || c === 'auth/password-does-not-meet-requirements' ? `Choose a stronger password (at least ${PASSWORD_MIN} characters).`
+      : c === 'auth/too-many-requests' ? 'Too many attempts from this device. Wait a few minutes.'
+      : `Could not create the account (${c || 'unknown'})`)
+    return false
+  }
+}
+export async function signInWithPassword(email: string, password: string): Promise<boolean> {
+  if (!auth) return false
+  const clean = email.trim().toLowerCase()
+  if (!EMAIL_RE.test(clean) || !password) { setError('Enter your email address and password.'); return false }
+  if (!allowed('signin', 2, 15)) return false
+  try { setError(null); await signInWithEmailAndPassword(auth, clean, password); return true }
+  catch (e) {
+    const c = codeOf(e)
+    // one message for "no such account" and "wrong password": it never reveals which addresses have accounts
+    setError(c === 'auth/too-many-requests' ? 'Too many attempts. Wait a few minutes, or reset your password.'
+      : c === 'auth/user-disabled' ? 'This account has been disabled.'
+      : c === 'auth/network-request-failed' ? 'No connection. Check your internet and try again.'
+      : 'Wrong email or password.')
+    return false
+  }
+}
+/** Send a reset link. Always reports success for a well-formed address, so it cannot be used to find out who has an account. */
+export async function resetPassword(email: string): Promise<boolean> {
+  if (!auth) return false
+  const clean = email.trim().toLowerCase()
+  if (!EMAIL_RE.test(clean)) { setError('That does not look like an email address.'); return false }
+  if (!allowed('reset', 45, 4)) return false
+  try { setError(null); await sendPasswordResetEmail(auth, clean, { url: `${window.location.origin}/` }) }
+  catch (e) {
+    const c = codeOf(e)
+    if (c === 'auth/too-many-requests' || c === 'auth/quota-exceeded') { setError('Too many reset emails. Try again later.'); return false }
+    if (c === 'auth/network-request-failed') { setError('No connection. Check your internet and try again.'); return false }
+    // user-not-found and anything else: same answer as success
+  }
+  return true
+}
+/** The "confirm your email" screen: send the link again. */
+export async function resendVerification(): Promise<boolean> {
+  const u = auth?.currentUser
+  if (!u) return false
+  if (!allowed('verify', 45, 5)) return false
+  try { setError(null); await sendEmailVerification(u, { url: `${window.location.origin}/` }); return true }
+  catch (e) { setError(codeOf(e) === 'auth/too-many-requests' ? 'Too many emails. Try again later.' : `Could not send it (${codeOf(e) || 'unknown'})`); return false }
+}
+/** After opening the emailed link (here or on another device): look again, and open the workspace if the address is now confirmed. */
+export async function checkVerified(quiet = false): Promise<void> {
+  const u = auth?.currentUser
+  if (!u) return
+  try {
+    await u.reload()
+    if (u.emailVerified) { await u.getIdToken(true); void onUser(u); return }
+    if (!quiet) setError('Not confirmed yet. Open the link in the email, then press Continue again.')
+  } catch { if (!quiet) setError('Could not check. Try again.') }
+}
+
 /** True when this page was opened from a sign-in link. */
 export const openedFromEmailLink = (): boolean => !!auth && isSignInWithEmailLink(auth, window.location.href)
 /** The address the link was sent to, if it was sent from this browser. */
@@ -183,6 +279,7 @@ async function onUser(fu: User | null): Promise<void> {
   const provider = fu.providerData.some((p) => p.providerId === 'google.com') ? 'google' : 'email'
   const user: SessionUser = { uid: fu.uid, email: fu.email ?? '', name: fu.displayName ?? (fu.email ?? 'You').split('@')[0], provider }
   // Only a verified address gets in. Google and email-link sign-ins are verified by construction; this catches anything else.
+  if (!fu.emailVerified && fu.providerData.some((p) => p.providerId === 'password')) { useSession.setState({ status: 'unverified', user, error: null }); return }
   if (!fu.emailVerified) { useSession.setState({ status: 'error', user, error: `${user.email || 'This account'} is not verified. Sign out and sign in with Google or an email link.` }); return }
   useSession.setState({ status: 'opening', user, error: null })
   try {
