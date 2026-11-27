@@ -231,11 +231,35 @@ function LinkChip({ el, selected }: { el: LinkEl; selected: boolean }): JSX.Elem
 const laneId = (): string => 'l' + Math.random().toString(36).slice(2, 8)
 export const POOL_STEP = { w: 120, h: 80, min: { w: 360, h: 220 } }
 
+const LANE_MIN_SHARE = 0.12 // no lane can be dragged thinner than this share of the board
+
 function Pool({ el, selected, onSelect }: { el: PoolEl; selected: boolean; onSelect: (id: string | null) => void }): JSX.Element {
   const update = useElementStore((s) => s.update)
   const setLane = (id: string, title: string): void => update(el.id, { lanes: el.lanes.map((l) => (l.id === id ? { ...l, title } : l)) })
   const drop = (id: string): void => { if (el.lanes.length > 1) update(el.id, { lanes: el.lanes.filter((l) => l.id !== id) }) }
   const stop = (e: React.PointerEvent): void => e.stopPropagation() // typing in a label must not start dragging the board
+  const lanesRef = useRef<HTMLDivElement>(null)
+  // Dragging the divider after lane `i`: the two lanes either side trade size; the rest stay as they are. The pointer
+  // moves in screen pixels, the lanes' sizes are relative, so the board's own on-screen length is the ruler (zoom-proof).
+  const drag = useRef<{ i: number; start: number; a: number; b: number; per: number } | null>(null)
+  const down = (e: React.PointerEvent<HTMLDivElement>, i: number): void => {
+    e.stopPropagation(); e.preventDefault()
+    const box = lanesRef.current?.getBoundingClientRect()
+    if (!box) return
+    const px = el.dir === 'rows' ? box.height : box.width
+    const sizes = el.lanes.map((l) => l.size ?? 1), total = sizes.reduce((a, b) => a + b, 0)
+    drag.current = { i, start: el.dir === 'rows' ? e.clientY : e.clientX, a: sizes[i], b: sizes[i + 1], per: total / Math.max(px, 1) }
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* the move events still reach the handle */ }
+  }
+  const move = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const d = drag.current
+    if (!d) return
+    const delta = ((el.dir === 'rows' ? e.clientY : e.clientX) - d.start) * d.per
+    const total = el.lanes.reduce((a, l) => a + (l.size ?? 1), 0), min = total * LANE_MIN_SHARE
+    const a = Math.min(Math.max(d.a + delta, min), d.a + d.b - min)
+    update(el.id, { lanes: el.lanes.map((l, k) => (k === d.i ? { ...l, size: a } : k === d.i + 1 ? { ...l, size: d.a + d.b - a } : l)) })
+  }
+  const up = (e: React.PointerEvent<HTMLDivElement>): void => { drag.current = null; try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* already released */ } }
   return (
     <Shell el={el} selected={selected} className="wb-pool" onTap={() => onSelect(selected ? null : el.id)}>
       <div className={`wb-pool-box is-${el.dir}`} style={{ width: el.w, height: el.h }}>
@@ -244,14 +268,18 @@ function Pool({ el, selected, onSelect }: { el: PoolEl; selected: boolean; onSel
           <input value={el.title ?? ''} placeholder="Process or department" maxLength={60} aria-label="Swimlane board title" onPointerDown={stop}
             onChange={(e) => update(el.id, { title: e.target.value })} />
         </div>
-        <div className="wb-pool-lanes">
+        <div className="wb-pool-lanes" ref={lanesRef}>
           {el.lanes.map((l, i) => (
-            <div key={l.id} className="wb-pool-lane" style={{ '--lane': `var(--lane-${i % 6})` } as React.CSSProperties}>
+            <div key={l.id} className="wb-pool-lane" style={{ '--lane': `var(--lane-${i % 6})`, flex: `${l.size ?? 1} 1 0` } as React.CSSProperties}>
               <div className="wb-pool-head" title="Drag here to move the board">
                 <span className="wb-pool-grip" aria-hidden>⠿</span>
                 <input value={l.title} maxLength={24} aria-label={`Lane ${i + 1} name`} onPointerDown={stop} onChange={(e) => setLane(l.id, e.target.value)} />
                 {selected && el.lanes.length > 1 && <button className="wb-pool-x" title="Remove this lane" aria-label="Remove lane" onPointerDown={stop} onClick={() => drop(l.id)}>×</button>}
               </div>
+              {i < el.lanes.length - 1 && (
+                <div className={`wb-pool-div is-${el.dir}`} role="separator" aria-label="Drag to resize the lanes either side" title="Drag to resize"
+                  onPointerDown={(e) => down(e, i)} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
+              )}
             </div>
           ))}
         </div>
@@ -264,7 +292,7 @@ function Pool({ el, selected, onSelect }: { el: PoolEl; selected: boolean; onSel
 export function PoolTools({ el }: { el: PoolEl }): JSX.Element {
   const update = useElementStore((s) => s.update)
   const grow = (dw: number, dh: number): void => update(el.id, { w: Math.max(POOL_STEP.min.w, el.w + dw), h: Math.max(POOL_STEP.min.h, el.h + dh) })
-  const add = (): void => update(el.id, { lanes: [...el.lanes, { id: laneId(), title: `Lane ${el.lanes.length + 1}` }], ...(el.dir === 'rows' ? { h: el.h + 140 } : { w: el.w + 220 }) })
+  const add = (): void => update(el.id, { lanes: [...el.lanes, { id: laneId(), title: `Lane ${el.lanes.length + 1}`, size: el.lanes.reduce((a, l) => a + (l.size ?? 1), 0) / el.lanes.length }], ...(el.dir === 'rows' ? { h: el.h + 140 } : { w: el.w + 220 }) })
   return (
     <div className="wb-pool-tools" role="group" aria-label="Swimlane board">
       <button className="wb-ctx-btn" onClick={add} title="Add a lane">+ Lane</button>
