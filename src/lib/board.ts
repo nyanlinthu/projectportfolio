@@ -278,7 +278,10 @@ export function laneLayout(focus: BoardNode, kids: ChildMap, wrap = COMPACT_MAX,
     return { pos: out, bands: cols.map((c) => ({ name: c.name, top: y0, bottom, left: c.x + 95 - LANE_COL_W / 2 + 12, right: c.x + 95 + LANE_COL_W / 2 - 12, count: c.cards.length })) }
   }
 
-  const left0 = focus.x - ((wrap - 1) / 2) * BRANCH_W
+  // as wide as the fullest lane needs (never wider than the wrap), so deleting cards narrows the bands too
+  const fullest = Math.max(1, ...names.map((n) => cs.filter((c) => inLane(c, n, names)).length))
+  const width = Math.min(wrap, fullest)
+  const left0 = focus.x - ((width - 1) / 2) * BRANCH_W
   const lanes: { name: string; top: number; bottom: number; cards: BoardNode[] }[] = []
   let top = focus.y + LEVEL_H + 10
   for (const name of names) {
@@ -302,7 +305,7 @@ export function laneLayout(focus: BoardNode, kids: ChildMap, wrap = COMPACT_MAX,
     Object.assign(out, br.pos)
   }
   const xs = Object.values(out).map((p) => p.x)
-  const right = Math.max(left0 + (wrap - 1) * BRANCH_W, ...xs) + 190 + 36, left = Math.min(left0, ...xs) - 36 // an opened branch can be wider than the lane's grid
+  const right = Math.max(left0 + (width - 1) * BRANCH_W, ...xs) + 190 + 36, left = Math.min(left0, ...xs) - 36 // an opened branch can be wider than the lane's grid
   return { pos: out, bands: lanes.map((l) => ({ name: l.name, top: l.top, bottom: l.bottom, left, right, count: l.cards.length })) }
 }
 
