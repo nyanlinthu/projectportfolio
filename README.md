@@ -75,6 +75,20 @@ Two things share the name, and they are separate on purpose:
 Lane membership is only a `lane` label on each card, and the bands are drawn from it, so progress roll-up and access
 rules are untouched.
 
+## Run it from chat: the agent
+
+<img src=".github/assets/agent-telegram.gif" width="320" align="right" alt="Telegram chat with the ProjectPortfolio bot: a WBS picture by swimlane, 'Where are we stuck?' answered with the ERP rollout bottleneck and the ISO 9001 gate at risk, then the timeline as a picture">
+
+Any MCP agent (Hermes, Claude Code, Codex) can run a workspace from a chat: move status, add projects, milestones,
+tasks, notes, checklists, pages and swimlane workflows, fill in the project charter, link dependencies. Ask
+*"where are we stuck?"* and it answers from computed facts (bottlenecks, the longest open dependency chain, blocked,
+late and stale work), with a picture of the real board: the WBS tree, the timeline, the boards.
+
+It runs the app's own tools against the workspace, so an agent can do exactly what that member could do in the app
+and nothing more. Every change is logged and can be reverted. Setup and the security model: [`agent/`](agent/README.md).
+
+<br clear="right">
+
 ## Architecture
 
 ```mermaid
@@ -154,6 +168,7 @@ src/components/board   whiteboard, cards, tables, pages, sheets
 src/lib                pure logic (formula, merge, search, scope, views, pmkit), unit-tested
 src/services           Firebase: auth, sync, presence, inbox, admin
 src/ai/tools.ts        agent tool definitions over the same stores the UI uses
+agent/                 MCP server: lets Hermes, Claude Code, Codex run a workspace (see agent/README.md)
 canvas-kit/            the shared canvas engine (also used by other apps of mine)
 firestore.rules        the access boundary, with test/rules.test.mjs
 ```
