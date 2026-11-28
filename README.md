@@ -14,20 +14,23 @@ Designed and built solo by [Nyan Lin Thu](https://nyanlinthu.com) (PMP), using C
 
 ## Why I built this
 
-I'm a project manager. Every project has a work breakdown structure, but in practice the WBS only exists in the
-project manager's head. No tool shows it the way we picture it.
+I'm a project manager. These are the pains that made me build it:
 
-- **Notion** templates solve most of the planning, but there's no real whiteboard: you can't lay the work out and see it.
-- **Microsoft Project** is excellent for the plan, but the operations people doing the work can't realistically
-  update it, so their progress never rolls up into the project's status.
-- **Status reports**: whether you are the project manager, a department manager or the board of directors, you
-  sooner or later have to ask someone for a report to find out how a project is going. This tool removes that step.
-  Each task rolls up into its milestone, project and portfolio, so when the team marks their tasks "Done" at the end
-  of the work day, the progress is already there, and everyone who has access sees it directly. Nobody has to chase
-  a report.
+- Operations teams' progress can't be seen unless someone asks the department head or manager for a report, and
+  that invites surprises for management.
+- Yet operations teams can't realistically update a Microsoft Project plan to report their progress.
+- That leads to Notion, Trello, Jira or Asana. Then you still need whiteboards, process flows and swimlanes, which
+  leads to draw.io or Lucidchart. We kept adding tools until the information was no longer in one place.
+- And I always wanted a graphical work breakdown structure to interact with: a WBS everyone can see, not one that
+  lives only in the PM's head.
 
-ProjectPortfolio is the tool I wanted: the WBS as something you can see and arrange, where the person doing a task
-taps its status on their phone and the milestone, project and portfolio above it update by themselves.
+So I built ProjectPortfolio to solve these problems. All the tools are in one place, and it's intuitive for
+operations teams to mark their tasks "Done", which rolls up to the milestone, project and portfolio by itself.
+Chartering a project is as easy as clicking the Plus button on a node: every new project starts with its charter.
+
+It's MCP-ready (Model Context Protocol). Self-host it, and your own AI agent (Hermes, Claude Code or Codex) can
+update tasks, fill in the charter, tell you where the project is stuck, or tweak it however you like. See
+[`agent/`](agent/README.md).
 
 I'm giving it back to the project-management community, for anyone with the same problem to use with their team.
 Clone it and run it yourself, or use the hosted version at
