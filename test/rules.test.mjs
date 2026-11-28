@@ -340,6 +340,14 @@ await t('a notification cannot carry the page text', assertFails(setDoc(doc(owne
 await t('another sender cannot overwrite someone else\'s notification', assertFails(setDoc(doc(op2, 'users', 'sc1', 'inbox', mid('pg4', 'owner1')), mention('op2', 'sc1', 'pg4', ['root', 'projA']))))
 await t('the recipient deletes it', assertSucceeds(deleteDoc(doc(op2, 'users', 'op2', 'inbox', mid('pg1', 'owner1')))))
 
+// Agent server collections (agent/): server-only. No browser, not even the workspace owner, may read or write them.
+await t('owner cannot read agent tokens', assertFails(getDoc(doc(owner, 'agentTokens', 'abc'))))
+await t('owner cannot list agent tokens', assertFails(getDocs(collection(owner, 'agentTokens'))))
+await t('owner cannot mint an agent token from the browser', assertFails(setDoc(doc(owner, 'agentTokens', 'abc'), { wid: W, uid: 'owner1' })))
+await t('owner cannot read the agent change log', assertFails(getDocs(collection(owner, 'workspaces', W, 'agentLog'))))
+await t('owner cannot write the agent change log', assertFails(setDoc(doc(owner, 'workspaces', W, 'agentLog', 'x'), { tool: 'x' })))
+await t('signed-out visitor cannot read agent tokens', assertFails(getDoc(doc(anon, 'agentTokens', 'abc'))))
+
 await env.cleanup()
 console.log(failed ? `${failed} of ${n} rule tests FAILED` : `all ${n} rule tests passed`)
 process.exit(failed ? 1 : 0)

@@ -7,11 +7,11 @@ import {
   arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, getDocsFromServer, limit, onSnapshot, query, runTransaction,
   setDoc, updateDoc, where, writeBatch,
 } from 'firebase/firestore'
-import { owningNodeId } from '@/lib/scope'
 import { seedNodes, ROOT_ID, useBoardStore } from '@/store/useBoardStore'
 import { useElementStore } from '@/store/useElementStore'
 import { clearHistory, pauseHistory } from '@/lib/history'
 import { merge3 } from '@/lib/merge'
+import { elementAnc, treeAnc } from '@/lib/anc'
 import { newRoomKey } from '@/store/usePresence'
 import { Invite, Member, notify, Role, SessionUser, useSession, WorkspaceRef } from '@/store/useSession'
 import { BoardElement, BoardNode } from '@/types'
@@ -339,16 +339,11 @@ async function startSync(wid: string, uid: string, role: Role, scopes: string[],
   // under a stand-in portfolio card (never sent); `realParent` remembers where each one really lives.
   const realParent = new Map<string, string>()
   let ghost: BoardNode | null = null
-  const nodeAnc = (id: string, nodes: Record<string, BoardNode>, depth = 0): string[] => {
-    const n = nodes[id]
-    if (realParent.has(id) || !n) return ancN.get(id) ?? [id]
-    if (!n.parentId || id === ROOT_ID || depth > 60) return [id]
-    return [...nodeAnc(n.parentId, nodes, depth + 1), id]
-  }
-  const elAnc = (e: BoardElement, nodes: Record<string, BoardNode>, els: BoardElement[]): string[] => {
-    const owner = owningNodeId(e.scopeId, nodes, els)
-    return owner ? nodeAnc(owner, nodes) : []
-  }
+  // a scoped person's own cards (and anything this device cannot see) keep the anc the server sent
+  const known = (nodes: Record<string, BoardNode>) => (id: string): string[] | null =>
+    realParent.has(id) || !nodes[id] ? ancN.get(id) ?? [id] : id === ROOT_ID ? [id] : null
+  const nodeAnc = (id: string, nodes: Record<string, BoardNode>): string[] => treeAnc(id, nodes, known(nodes))
+  const elAnc = (e: BoardElement, nodes: Record<string, BoardNode>, els: BoardElement[]): string[] => elementAnc(e, nodes, els, known(nodes))
   const nodeOut = (n: BoardNode, nodes: Record<string, BoardNode>): Stored<BoardNode> => ({ ...n, ...(realParent.has(n.id) ? { parentId: realParent.get(n.id) } : {}), anc: nodeAnc(n.id, nodes) })
   const elOut = (e: BoardElement, nodes: Record<string, BoardNode>, els: BoardElement[]): Stored<BoardElement> => ({ ...e, anc: elAnc(e, nodes, els) })
   const nodeIn = (raw: Stored<BoardNode>): BoardNode => { const { anc: _a, ...n } = raw; return realParent.has(n.id) ? { ...n, parentId: ROOT_ID } : n }

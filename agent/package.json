@@ -1,0 +1,29 @@
+{
+  "name": "projectportfolio-agent",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MCP server that lets an AI agent (Hermes, Claude Code, Codex, any MCP client) read and change a ProjectPortfolio workspace.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node dist/stdio.js",
+    "start:http": "node dist/http.js",
+    "token": "node dist/token.js",
+    "test": "node build.mjs && node --test test/e2e.test.mjs",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "express": "^5.3.0",
+    "firebase-admin": "^14.5.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.19.43",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.9.3"
+  }
+}

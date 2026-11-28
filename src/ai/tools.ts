@@ -18,9 +18,9 @@ import { BoardElement, BoardNode, Priority, Status } from '@/types'
 // logic (roll-up, formulas, search) the UI uses, so the agent sees exactly what a person sees and cannot
 // write anything the UI could not have written.
 //
-// No model is wired in yet. To add one: send TOOL_DEFS as `tools`, and run each tool_use block through callTool().
-// The same list is what an MCP server would expose (the hermes agents reach lifeos that way) once the data is
-// saved somewhere a server can reach.
+// To use them in-app with a model: send TOOL_DEFS as `tools`, and run each tool_use block through callTool().
+// agent/ serves this same list over MCP (Hermes, Claude Code, Codex, ...): it runs these functions server-side
+// against a workspace loaded from Firestore. See agent/README.md.
 
 export interface ToolDef {
   name: string

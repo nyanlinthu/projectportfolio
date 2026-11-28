@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": { "@/*": ["src/*"], "canvas-kit": ["agent/src/shims/canvas-kit.ts"], "@/services/inbox": ["agent/src/shims/inbox.ts"] },
+    "types": ["node", "vite/client"],
+    "noEmit": true
+  },
+  "include": ["src", "../src/vite-env.d.ts"]
+}
