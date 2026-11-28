@@ -74,6 +74,16 @@ function describeElement(e: BoardElement): Record<string, unknown> {
   return { ...base, text: e.text, ...(e.kind === 'shape' ? { shape: e.shape } : {}) }
 }
 
+/** A clear spot for something new on a card's board: right of every card under it and every element already there. */
+function clearSpot(n: BoardNode): { x: number; y: number } {
+  const kids = deriveBoard(nodes()).kids
+  let right = n.x + 260
+  const walk = (id: string): void => { for (const k of kids.get(id) ?? []) { right = Math.max(right, k.x + 260); walk(k.id) } }
+  walk(n.id)
+  for (const e of elements()) if (e.scopeId === n.id && e.kind !== 'connector') right = Math.max(right, e.x + ('w' in e && typeof e.w === 'number' ? e.w : 260))
+  return { x: right + 80, y: n.y }
+}
+
 const TOOLS: Tool[] = [
   {
     name: 'get_schema',
@@ -281,8 +291,8 @@ const TOOLS: Tool[] = [
     run: (a) => {
       const n = needNode(a.on_board_of)
       const items = (Array.isArray(a.items) ? a.items : []).map((t) => ({ id: uid('i'), text: String(t), done: false }))
-      const mine = elements().filter((e) => e.scopeId === n.id && e.kind === 'checklist').length
-      return { id: useElementStore.getState().add({ kind: 'checklist', scopeId: n.id, z: topZ(), x: n.x + 230, y: n.y + 160 + mine * 200, groups: [{ id: uid('g'), title: optStr(a.title) ?? '', items }] }) }
+      const at = clearSpot(n)
+      return { id: useElementStore.getState().add({ kind: 'checklist', scopeId: n.id, z: topZ(), x: at.x, y: at.y, groups: [{ id: uid('g'), title: optStr(a.title) ?? '', items }] }) }
     },
   },
   {
@@ -353,7 +363,7 @@ const TOOLS: Tool[] = [
       if (!lanes.length) throw new Error('Give at least one lane')
       const laneOf = (name: string): number => { const i = lanes.findIndex((l) => l.toLowerCase() === String(name).toLowerCase()); if (i < 0) throw new Error(`Step lane "${name}" is not one of the lanes`); return i }
       steps.forEach((st) => laneOf(st.lane))
-      const LANE_H = 160, STEP_W = 200, x0 = n.x + 230, y0 = n.y + 200
+      const LANE_H = 160, STEP_W = 200, { x: x0, y: y0 } = clearSpot(n)
       const w = Math.max(760, 140 + steps.length * STEP_W), h = lanes.length * LANE_H
       const store = useElementStore.getState()
       const pool = store.add({ kind: 'pool', scopeId: n.id, z: 0, x: x0, y: y0, dir: 'rows', w, h, title: optStr(a.title) ?? '', lanes: lanes.map((t) => ({ id: uid('l'), title: t })) })

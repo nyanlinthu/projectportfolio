@@ -3,6 +3,7 @@ import { db } from './firestore'
 import type { Caller } from './auth'
 import { apply, authorize, commit, diff, hydrate, load, same, serial, type Change } from './workspace'
 import { health, HEALTH_DEF } from './health'
+import { RENDER_DEF, renderView } from './render'
 import { useBoardStore } from '@/store/useBoardStore'
 import { useElementStore } from '@/store/useElementStore'
 
@@ -26,6 +27,7 @@ const SERVER_TOOLS: ToolDef[] = [
     input_schema: { type: 'object', properties: { change_id: { type: 'string' }, force: { type: 'boolean' } }, required: ['change_id'] },
   },
   HEALTH_DEF,
+  RENDER_DEF,
 ]
 
 export const AGENT_TOOLS: ToolDef[] = [...TOOL_DEFS.filter((t) => !BROWSER_ONLY.has(t.name)), ...SERVER_TOOLS]
@@ -41,6 +43,7 @@ export async function runTool(c: Caller, name: string, args: Record<string, unkn
     const base = await load(c)
     hydrate(c, base)
     if (name === 'project_health') return health(args)
+    if (name === 'render_view') { const r = await renderView(args); return { image_png_base64: r.png, view: r.view, root_id: r.root } }
     if (name === 'revert_change') return revert(c, base, args)
     if (!AGENT_TOOLS.some((t) => t.name === name)) return { error: `Unknown tool "${name}"` }
     const result = callTool(name, args) as { error?: string } | undefined

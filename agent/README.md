@@ -3,8 +3,8 @@
 Connect any MCP agent — **Hermes**, **Claude Code**, **Codex**, or anything else that speaks the
 [Model Context Protocol](https://modelcontextprotocol.io) — to a ProjectPortfolio workspace. The agent can do
 everything a person can do on the board: add and update projects, milestones and tasks, move status, write notes,
-pages, checklists and tables, add PMBOK project plans (charter, risk register, …), draw arrows, mention teammates.
-It can also tell you where the work is stuck.
+pages, checklists, tables and swimlane workflows, fill in PMBOK project plans (charter, risk register, …), link
+task dependencies, draw arrows, mention teammates. It can tell you where the work is stuck, and send a picture of it.
 
 This folder is a **recipe**: self-contained, no sibling repos, meant to be read, run and extended.
 
@@ -42,6 +42,14 @@ always agree between the app and the agent. **Add a tool to `src/ai/tools.ts` an
 Browser-only modules are swapped at build time (`build.mjs`, `src/shims/`): `canvas-kit` → just its roll-up engine,
 `services/inbox` → an admin-SDK version. Any other `@/services/*` import fails the build on purpose.
 
+### Pictures
+
+`render_view` renders the real app, not a lookalike. `vite.render.config.ts` (repo root) builds the app with no
+Firebase config at all, so it starts in its single-browser mode with no sign-in and nothing to write to. The server
+serves that build on `127.0.0.1` only, puts the caller's already-permission-checked workspace into the page's
+localStorage, opens the view through the app's own `?view=` link, hides the editing chrome, and screenshots it in
+headless Chrome. Requests to any other origin (except fonts) are blocked.
+
 ### Tools
 
 Everything in `src/ai/tools.ts` except `undo`/`redo` (they belong to one browser tab), plus:
@@ -49,6 +57,7 @@ Everything in `src/ai/tools.ts` except `undo`/`redo` (they belong to one browser
 | Tool | What |
 |---|---|
 | `project_health` | Bottlenecks (open tasks the most other work waits on, via finish-to-start `after` links), the longest open dependency chain, blocked / late / out-of-sequence / stale tasks, unassigned work, load per person, milestones and projects not on track. Computed, not guessed. |
+| `render_view` | A PNG of the board exactly as the app draws it — tree (WBS), timeline (planned vs actual, Gantt-style), boards by project / milestone / priority — returned as MCP image content so the agent can post it to Discord, Telegram, Slack. |
 | `list_changes` | Recent agent changes in the workspace. |
 | `revert_change` | Put back everything one agent change touched. Refuses if someone edited those items since, unless `force: true`. |
 
@@ -72,6 +81,7 @@ You need your own Firebase project running ProjectPortfolio (see the main README
 cd agent
 npm install
 npm run build
+npm run build:render      # only for pictures; needs Chrome (or set PP_CHROME_PATH)
 gcloud auth application-default login        # or GOOGLE_APPLICATION_CREDENTIALS=/path/outside/repo/key.json
 export PP_FIREBASE_PROJECT=<your-firebase-project-id>
 
@@ -141,12 +151,10 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 PP_FIREBASE_PROJECT=demo-projectportfolio
 
 ## Roadmap (pick one up)
 
-- **Pictures of the board** — render the WBS tree, timeline and kanban as PNGs an agent can send to a chat. Pattern:
-  a render-only build of the app served on `127.0.0.1`, opened in headless Chrome (`puppeteer-core`), its Firestore
-  replaced by a read-only stand-in answered by this server for one workspace only; screenshot the route.
+- **Pictures in the Docker image** — `render_view` needs Chrome, which the image does not include yet; add
+  `chromium` and set `PP_CHROME_PATH`. Pictures also show the current window only; fitting the whole board is next.
 - **Card-scoped members** — port the stand-in portfolio card handling from `src/services/cloud.ts`, then lift the
   refusal in `auth.ts`.
 - **Tokens from the app** — a "Connect an agent" sheet that mints and revokes tokens (needs a callable function;
   the browser must never write `agentTokens/` directly).
-- **Dependencies as a tool** — `after` links exist in the data and drive `project_health`; add a
-  `link_dependency` tool to `src/ai/tools.ts` (use `linkPatch` / `makesLoop` from `src/lib/dates.ts`).
+- **Docker image** — written, not yet built in CI; treat it as a starting point.

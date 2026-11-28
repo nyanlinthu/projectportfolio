@@ -15,6 +15,11 @@ export function createServer(getCaller: () => Promise<Caller>): Server {
       const caller = await getCaller()
       const out = await runTool(caller, req.params.name, (req.params.arguments ?? {}) as Record<string, unknown>)
       const isError = !!out && typeof out === 'object' && 'error' in (out as object)
+      // a picture goes back as MCP image content, so every client can show or forward it
+      if (out && typeof out === 'object' && 'image_png_base64' in out) {
+        const { image_png_base64: data, ...rest } = out as { image_png_base64: string }
+        return { content: [{ type: 'image', data, mimeType: 'image/png' }, { type: 'text', text: JSON.stringify(rest) }] }
+      }
       return { content: [{ type: 'text', text: JSON.stringify(out ?? null, null, 1) }], isError }
     } catch (e) {
       return { content: [{ type: 'text', text: `Error: ${e instanceof Error ? e.message : String(e)}` }], isError: true }

@@ -96,6 +96,20 @@ test('delete takes its board with it, and revert brings both back', async () => 
   await c.close()
 })
 
+test('render_view returns a PNG of the real board', { skip: !process.env.PP_TEST_RENDER }, async () => {
+  const { c } = await connect(mint('man@example.com'))
+  for (const view of ['tree', 'timeline']) {
+    const r = await c.callTool({ name: 'render_view', arguments: { view, root_id: 'p1' } })
+    assert.ok(!r.isError, JSON.stringify(r.content).slice(0, 300))
+    const img = r.content.find((x) => x.type === 'image')
+    assert.equal(img.mimeType, 'image/png')
+    const buf = Buffer.from(img.data, 'base64')
+    assert.ok(buf.length > 20_000, `a real picture, got ${buf.length} bytes`)
+    if (process.env.PP_TEST_RENDER_OUT) (await import('node:fs')).writeFileSync(`${process.env.PP_TEST_RENDER_OUT}/${view}.png`, buf)
+  }
+  await c.close()
+})
+
 test('operator agent: only status of own tasks', async () => {
   const { c, call } = await connect(mint('op@example.com'))
   assert.ok(!(await call('update_work_item', { id: 't4', status: 'doing' })).isError)
