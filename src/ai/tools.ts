@@ -1,6 +1,7 @@
 import { addPlan, addStarterKit, TEMPLATES } from '@/lib/pmkit'
 import { childKind, deriveBoard, KIND_LABEL, nextChildSpot, PRIORITIES, STATUSES } from '@/lib/board'
 import { display } from '@/lib/formula'
+import { linkPatch } from '@/lib/dates'
 import { copyPayload, pastePayload } from '@/lib/clipboard'
 import { redo, undo } from '@/lib/history'
 import { buildIndex, searchIndex } from '@/lib/search'
@@ -39,6 +40,8 @@ const needTable = (id: unknown): Extract<BoardElement, { kind: 'table' }> => {
   if (!e || e.kind !== 'table') throw new Error(`No table with id ${String(id)}`)
   return e
 }
+// Not crypto.randomUUID: unavailable on plain-http LAN addresses (same reason as the stores).
+const uid = (p: string): string => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 const STATUS_IDS = STATUSES.map((s) => s.id)
 const PRIORITY_IDS = PRIORITIES.map((p) => p.id)
 
@@ -47,7 +50,7 @@ function describeNode(n: BoardNode, board = deriveBoard(nodes())): Record<string
   const v = board.view(n)
   return {
     id: n.id, kind: n.kind, title: n.title, parent_id: n.parentId ?? null,
-    ...(n.kind === 'task' ? { status: n.status ?? 'backlog', priority: n.priority ?? null, state: v.label, assignee: n.assignee ?? null, start: n.start ?? null, end: n.end ?? null, actual_start: n.actualStart ?? null, actual_end: n.actualEnd ?? null }
+    ...(n.kind === 'task' ? { status: n.status ?? 'backlog', priority: n.priority ?? null, state: v.label, assignee: n.assignee ?? null, start: n.start ?? null, end: n.end ?? null, actual_start: n.actualStart ?? null, actual_end: n.actualEnd ?? null, after: n.after ?? [] }
       : { progress_pct: v.pct, tasks_done: v.done, tasks_total: v.total, health: v.label }),
     children: (board.kids.get(n.id) ?? []).map((k) => k.id),
   }
@@ -81,6 +84,7 @@ const TOOLS: Tool[] = [
       task_statuses: STATUS_IDS,
       task_priorities: 'Eisenhower disposition of a task, or null when not sorted yet: ' + PRIORITIES.map((p) => `${p.id} (${p.hint.toLowerCase()})`).join(', ') + '. Independent of status; a done task keeps its priority.',
       board_elements: 'Free-form things placed on a work item\'s board: page (title + text + @links), pool (a swimlane board: lanes for process flows by department / team; other items sit on top of it), text, sticky, shape, checklist, kanban (its own cards, independent of tasks), table (typed properties; each row is a page; text/number cells may be "=formulas" with A1 references and can read their card via PROGRESS(), TASKS(), DONE(), CARD()), connector (an arrow between any two items), image, stroke.',
+      dependencies: 'A task\'s `after` lists the tasks that must finish before it starts (link_dependency). A task waiting on an unfinished one is "waiting"; started before them, "out-of-sequence".',
       ids: 'Every work item and element has an id. The portfolio id is "' + ROOT_ID + '".',
     }),
   },
@@ -268,6 +272,119 @@ const TOOLS: Tool[] = [
       }
       useElementStore.getState().update(t.id, { rows: [...t.rows, row] })
       return { row: t.rows.length + 1, row_id: row.id }
+    },
+  },
+  {
+    name: 'add_checklist',
+    description: 'Put a checklist (a titled tick list) on a work item\'s board.',
+    input_schema: { type: 'object', properties: { on_board_of: { type: 'string', description: 'Work item id.' }, title: { type: 'string' }, items: { type: 'array', items: { type: 'string' } } }, required: ['on_board_of'] },
+    run: (a) => {
+      const n = needNode(a.on_board_of)
+      const items = (Array.isArray(a.items) ? a.items : []).map((t) => ({ id: uid('i'), text: String(t), done: false }))
+      const mine = elements().filter((e) => e.scopeId === n.id && e.kind === 'checklist').length
+      return { id: useElementStore.getState().add({ kind: 'checklist', scopeId: n.id, z: topZ(), x: n.x + 230, y: n.y + 160 + mine * 200, groups: [{ id: uid('g'), title: optStr(a.title) ?? '', items }] }) }
+    },
+  },
+  {
+    name: 'update_checklist',
+    description: 'Change a checklist: add items, tick or untick items, remove items, rename the list. Items are referred to by their 1-based number or their text. `list` picks the list inside the checklist (1-based, default 1).',
+    input_schema: { type: 'object', properties: { id: { type: 'string' }, list: { type: 'number' }, title: { type: 'string' }, add: { type: 'array', items: { type: 'string' } }, tick: { type: 'array', items: { type: ['string', 'number'] } }, untick: { type: 'array', items: { type: ['string', 'number'] } }, remove: { type: 'array', items: { type: ['string', 'number'] } } }, required: ['id'] },
+    run: (a) => {
+      const e = elements().find((x) => x.id === a.id)
+      if (!e || e.kind !== 'checklist') throw new Error(`No checklist with id ${String(a.id)}`)
+      const gi = (typeof a.list === 'number' ? a.list : 1) - 1
+      if (!e.groups[gi]) throw new Error(`The checklist has ${e.groups.length} list(s)`)
+      const g = { ...e.groups[gi], items: [...e.groups[gi].items] }
+      const find = (ref: unknown): number => {
+        const i = typeof ref === 'number' ? ref - 1 : g.items.findIndex((it) => it.text.trim().toLowerCase() === String(ref).trim().toLowerCase())
+        if (!(i >= 0 && i < g.items.length)) throw new Error(`No item "${String(ref)}" in that list`)
+        return i
+      }
+      const list = (k: string): unknown[] => (Array.isArray(a[k]) ? (a[k] as unknown[]) : [])
+      for (const r of list('tick')) { const i = find(r); g.items[i] = { ...g.items[i], done: true } }
+      for (const r of list('untick')) { const i = find(r); g.items[i] = { ...g.items[i], done: false } }
+      const drop = new Set(list('remove').map(find))
+      g.items = g.items.filter((_, i) => !drop.has(i))
+      for (const t of list('add')) g.items.push({ id: uid('i'), text: String(t), done: false })
+      if (typeof a.title === 'string') g.title = a.title
+      useElementStore.getState().update(e.id, { groups: e.groups.map((x, i) => (i === gi ? g : x)) })
+      return { items: g.items.map((it, i) => ({ n: i + 1, text: it.text, done: it.done })) }
+    },
+  },
+  {
+    name: 'update_element',
+    description: 'Edit a board element\'s words: a page\'s title and text (e.g. fill in a project charter), a note\'s or shape\'s text, a table/kanban/swimlane title, an arrow\'s label, swimlane lane names. `append` adds to the end of a page\'s text or a note instead of replacing it.',
+    input_schema: { type: 'object', properties: { id: { type: 'string' }, title: { type: 'string' }, text: { type: 'string', description: 'page text, or the text of a note/sticky/shape' }, append: { type: 'string' }, label: { type: 'string' }, lanes: { type: 'array', items: { type: 'string' } } }, required: ['id'] },
+    run: (a) => {
+      const e = elements().find((x) => x.id === a.id)
+      if (!e) throw new Error(`No element with id ${String(a.id)}`)
+      const patch: Record<string, unknown> = {}
+      const s = (k: string): string | undefined => (typeof a[k] === 'string' ? (a[k] as string) : undefined)
+      if (e.kind === 'page') {
+        if (s('title') !== undefined) patch.title = s('title')
+        if (s('text') !== undefined) patch.body = s('text')
+        if (s('append')) patch.body = `${e.body}${e.body ? '\n' : ''}${s('append')}`
+      } else if (e.kind === 'text' || e.kind === 'sticky' || e.kind === 'shape') {
+        if (s('text') !== undefined) patch.text = s('text')
+        if (s('append')) patch.text = `${e.text}${e.text ? '\n' : ''}${s('append')}`
+      } else if ((e.kind === 'table' || e.kind === 'kanban' || e.kind === 'pool') && s('title') !== undefined) patch.title = s('title')
+      else if (e.kind === 'connector' && s('label') !== undefined) patch.label = s('label')
+      if (e.kind === 'pool' && Array.isArray(a.lanes)) {
+        const names = (a.lanes as unknown[]).map(String)
+        patch.lanes = names.map((t, i) => ({ ...(e.lanes[i] ?? { id: uid('l') }), title: t }))
+      }
+      if (!Object.keys(patch).length) throw new Error(`Nothing to change on a ${e.kind} with those fields`)
+      useElementStore.getState().update(e.id, patch as never)
+      return describeElement(elements().find((x) => x.id === e.id)!)
+    },
+  },
+  {
+    name: 'add_workflow',
+    description: 'Draw a process flow as a swimlane board on a work item\'s board: one lane per team/role, steps placed in their lane in order and joined by arrows. Shapes: rect (process step, default), round (start/end), diamond (decision), ellipse (connector point).',
+    input_schema: { type: 'object', properties: {
+      on_board_of: { type: 'string' }, title: { type: 'string' }, lanes: { type: 'array', items: { type: 'string' } },
+      steps: { type: 'array', items: { type: 'object', properties: { lane: { type: 'string' }, text: { type: 'string' }, shape: { type: 'string', enum: ['rect', 'round', 'diamond', 'ellipse'] } }, required: ['lane', 'text'] } },
+      connect: { type: 'boolean', description: 'Join consecutive steps with arrows (default true).' },
+    }, required: ['on_board_of', 'lanes', 'steps'] },
+    run: (a) => {
+      const n = needNode(a.on_board_of)
+      const lanes = (Array.isArray(a.lanes) ? a.lanes : []).map(String)
+      const steps = (Array.isArray(a.steps) ? a.steps : []) as { lane: string; text: string; shape?: string }[]
+      if (!lanes.length) throw new Error('Give at least one lane')
+      const laneOf = (name: string): number => { const i = lanes.findIndex((l) => l.toLowerCase() === String(name).toLowerCase()); if (i < 0) throw new Error(`Step lane "${name}" is not one of the lanes`); return i }
+      steps.forEach((st) => laneOf(st.lane))
+      const LANE_H = 160, STEP_W = 200, x0 = n.x + 230, y0 = n.y + 200
+      const w = Math.max(760, 140 + steps.length * STEP_W), h = lanes.length * LANE_H
+      const store = useElementStore.getState()
+      const pool = store.add({ kind: 'pool', scopeId: n.id, z: 0, x: x0, y: y0, dir: 'rows', w, h, title: optStr(a.title) ?? '', lanes: lanes.map((t) => ({ id: uid('l'), title: t })) })
+      const ids = steps.map((st, i) => store.add({ kind: 'shape', scopeId: n.id, z: topZ(), shape: (['rect', 'round', 'diamond', 'ellipse'].includes(String(st.shape)) ? st.shape : 'rect') as 'rect', text: String(st.text), x: x0 + 110 + i * STEP_W, y: y0 + laneOf(st.lane) * LANE_H + LANE_H / 2 - 32 }))
+      const arrows = a.connect === false ? [] : ids.slice(1).map((to, i) => store.add({ kind: 'connector', scopeId: n.id, x: 0, y: 0, fromId: ids[i], toId: to }))
+      return { pool_id: pool, step_ids: ids, arrow_ids: arrows }
+    },
+  },
+  {
+    name: 'link_dependency',
+    description: 'Finish-to-start dependency: `after_id` cannot start until `before_id` is done. Drives waiting / out-of-sequence states and project_health bottlenecks. Refused if it would make a loop.',
+    input_schema: { type: 'object', properties: { before_id: { type: 'string' }, after_id: { type: 'string' } }, required: ['before_id', 'after_id'] },
+    run: (a) => {
+      const pred = needNode(a.before_id), succ = needNode(a.after_id)
+      if (pred.kind !== 'task' || succ.kind !== 'task') throw new Error('Dependencies link tasks')
+      if ((succ.after ?? []).includes(pred.id)) return { already: true }
+      const after = linkPatch(pred.id, succ.id, nodes())
+      if (!after) throw new Error(`That would make a loop: "${succ.title}" already comes before "${pred.title}"`)
+      useBoardStore.getState().updateNode(succ.id, { after })
+      return describeNode(nodes()[succ.id])
+    },
+  },
+  {
+    name: 'unlink_dependency',
+    description: 'Remove a finish-to-start dependency made with link_dependency.',
+    input_schema: { type: 'object', properties: { before_id: { type: 'string' }, after_id: { type: 'string' } }, required: ['before_id', 'after_id'] },
+    run: (a) => {
+      const succ = needNode(a.after_id), pred = str(a.before_id, 'before_id')
+      if (!(succ.after ?? []).includes(pred)) return { already: true }
+      useBoardStore.getState().updateNode(succ.id, { after: succ.after.filter((x) => x !== pred) })
+      return describeNode(nodes()[succ.id])
     },
   },
   {

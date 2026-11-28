@@ -3,6 +3,8 @@ import { db } from './firestore'
 import type { Caller } from './auth'
 import { apply, authorize, commit, diff, hydrate, load, same, serial, type Change } from './workspace'
 import { health, HEALTH_DEF } from './health'
+import { useBoardStore } from '@/store/useBoardStore'
+import { useElementStore } from '@/store/useElementStore'
 
 /**
  * The agent's tool list = the web app's own tools (src/ai/tools.ts, unchanged) minus the two that only make sense
@@ -42,6 +44,8 @@ export async function runTool(c: Caller, name: string, args: Record<string, unkn
     if (name === 'revert_change') return revert(c, base, args)
     if (!AGENT_TOOLS.some((t) => t.name === name)) return { error: `Unknown tool "${name}"` }
     const result = callTool(name, args) as { error?: string } | undefined
+    // the web app drops elements whose card is gone (Whiteboard effect); do it here so the log, and revert, cover them
+    useElementStore.getState().prune(new Set(Object.keys(useBoardStore.getState().nodes)))
     const changes = diff(base)
     if (result && typeof result === 'object' && 'error' in result) return result // a failed tool writes nothing
     if (!changes.length && name !== 'mention_teammate') return result

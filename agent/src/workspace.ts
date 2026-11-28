@@ -93,6 +93,8 @@ export function authorize(c: Caller, changes: Change[]): void {
     const b = ch.before as BoardNode | null, a = ch.after as BoardNode | null
     const keys = b && a ? Object.keys({ ...b, ...a }).filter((k) => !same((b as never)[k], (a as never)[k])) : []
     const ok = ch.store === 'n' && b && a && b.kind === 'task' && b.assigneeUid === c.uid && keys.every((k) => OPERATOR_KEYS.has(k))
+      && ['backlog', 'doing', 'blocked', 'done'].includes(String(a.status))
+      && [a.actualStart, a.actualEnd].every((d) => d === undefined || (typeof d === 'string' && d.length === 10))
     if (!ok) throw new Error('Your role in this workspace (operator) lets your agent change only the status of tasks assigned to you')
   }
 }
