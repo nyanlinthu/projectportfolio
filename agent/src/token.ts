@@ -4,6 +4,7 @@ import { hashToken, newToken } from './auth'
 
 // Manage agent tokens with your own admin credentials (the same ones the server uses).
 //   npm run token -- create --workspace <wid> --member <email or uid> [--label hermes]
+//   npm run token -- workspaces --member <email>     (which workspaces this person is in)
 //   npm run token -- list --workspace <wid>
 //   npm run token -- revoke --id <first 12+ characters of the id shown by list>
 const argv = process.argv.slice(2)
@@ -20,6 +21,15 @@ if (cmd === 'create') {
   const token = newToken()
   await db.collection('agentTokens').doc(hashToken(token)).set({ wid, uid: m.uid, label: opt('label') ?? 'agent', createdAt: Date.now(), lastUsedAt: null, revoked: false })
   console.log(`Agent token for ${m.name} (${m.role}) in ${wid}. Shown once; store it like a password:\n\n${token}\n`)
+} else if (cmd === 'workspaces') {
+  const who = need('member').toLowerCase()
+  // scans workspaces one by one: a collection-group query would need an extra index in every project
+  let found = 0
+  for (const ws of (await db.collection('workspaces').get()).docs) {
+    const m = await ws.ref.collection('members').where('email', '==', who).get()
+    for (const d of m.docs) { found++; console.log(`${ws.id}  ${d.data().role}  ${ws.data().name ?? ''}`) }
+  }
+  if (!found) console.log('none')
 } else if (cmd === 'list') {
   const wid = need('workspace')
   const snap = await db.collection('agentTokens').where('wid', '==', wid).get()
