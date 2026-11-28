@@ -6,6 +6,8 @@ everything a person can do on the board: add and update projects, milestones and
 pages, checklists, tables and swimlane workflows, fill in PMBOK project plans (charter, risk register, …), link
 task dependencies, draw arrows, mention teammates. It can tell you where the work is stuck, and send a picture of it.
 
+<img src="../.github/assets/agent-telegram.gif" width="280" alt="A Telegram chat with the agent: progress, a picture of the work breakdown, the bottleneck, the timeline, then a task marked done (preview with sample data)">
+
 This folder is a **recipe**: self-contained, no sibling repos, meant to be read, run and extended.
 
 ```

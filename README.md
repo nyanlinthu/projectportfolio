@@ -30,6 +30,8 @@ It's MCP-ready (Model Context Protocol). Self-host it, and your own AI agent (He
 update tasks, fill in the charter, tell you where the project is stuck, or tweak it however you like. See
 [`agent/`](agent/README.md).
 
+<img src=".github/assets/agent-telegram.gif" width="280" alt="A Telegram chat with a self-hosted ProjectPortfolio agent: portfolio progress, a picture of the work breakdown, the bottleneck, the timeline, then a task marked done (preview with sample data)">
+
 I'm giving it back to the project-management community, for anyone with the same problem to use with their team.
 Clone it and run it yourself, or use the hosted version at
 [projectportfolio.nyanlinthu.com](https://projectportfolio.nyanlinthu.com), which is free. If its running costs ever
