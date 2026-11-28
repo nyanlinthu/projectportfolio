@@ -8,7 +8,7 @@ each other's pointers live, and a person can be confined to just the branch of t
 
 **Live:** https://projectportfolio.nyanlinthu.com &nbsp;·&nbsp; [![CI](https://github.com/nyanlinthu/projectportfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/nyanlinthu/projectportfolio/actions/workflows/ci.yml) [![CodeQL](https://github.com/nyanlinthu/projectportfolio/actions/workflows/codeql.yml/badge.svg)](https://github.com/nyanlinthu/projectportfolio/actions/workflows/codeql.yml)
 
-![ProjectPortfolio: the work breakdown as a tree, then the same cards as a board and an Eisenhower matrix](.github/assets/demo.gif)
+![ProjectPortfolio: grouping projects into swimlanes, switching between tree, board, priority matrix and timeline, then adding a sticky note, a drawing and a page on the whiteboard](.github/assets/demo.gif)
 
 Designed and built solo by [Nyan Lin Thu](https://nyanlinthu.com) (PMP), using Claude Code as the engineering partner.
 
