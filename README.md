@@ -10,11 +10,9 @@ each other's pointers live, and a person can be confined to just the branch of t
 
 ![ProjectPortfolio: grouping projects into swimlanes, switching between tree, board, priority matrix and timeline, then adding a sticky note, a drawing and a page on the whiteboard](.github/assets/demo.gif)
 
-Designed and built solo by [Nyan Lin Thu](https://nyanlinthu.com) (PMP), using Claude Code as the engineering partner.
-
 ## Why I built this
 
-I'm a project manager. These are the pains that made me build it:
+If you manage projects or portfolios of projects, this repo might feel like home for you. The pains that prompted me to build this:
 
 - Operations teams' progress can't be seen unless someone asks the department head or manager for a report, and
   that invites surprises for management.
