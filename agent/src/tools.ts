@@ -30,7 +30,10 @@ const SERVER_TOOLS: ToolDef[] = [
   RENDER_DEF,
 ]
 
-export const AGENT_TOOLS: ToolDef[] = [...TOOL_DEFS.filter((t) => !BROWSER_ONLY.has(t.name)), ...SERVER_TOOLS]
+// The app's descriptions speak for one browser tab ("cannot be undone"). Here every change is logged and revertable.
+const forAgents = (t: ToolDef): ToolDef => ({ ...t, description: t.description.replace(/\s*Cannot be undone\./, ' Logged: revert_change with the returned change_id puts it all back.') })
+
+export const AGENT_TOOLS: ToolDef[] = [...TOOL_DEFS.filter((t) => !BROWSER_ONLY.has(t.name)).map(forAgents), ...SERVER_TOOLS]
 
 export async function runTool(c: Caller, name: string, args: Record<string, unknown>): Promise<unknown> {
   if (BROWSER_ONLY.has(name)) return { error: `"${name}" is not available to agents; use list_changes and revert_change` }
