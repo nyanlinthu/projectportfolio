@@ -91,6 +91,21 @@ npm run token -- list   --workspace <wid>
 npm run token -- revoke --id <first 12+ chars from list>
 ```
 
+### A dedicated service account (recommended on your own machine)
+
+Rather than running the server on your own (owner) Google login, give it a service account that can only use
+Firestore, and let your gcloud login impersonate it. No key file is ever written.
+
+```bash
+P=<project-id>; SA=pp-agent@$P.iam.gserviceaccount.com
+gcloud iam service-accounts create pp-agent --project $P --display-name "ProjectPortfolio agent server"
+gcloud projects add-iam-policy-binding $P --member serviceAccount:$SA --role roles/datastore.user --condition=None
+gcloud iam service-accounts add-iam-policy-binding $SA --project $P \
+  --member user:$(gcloud config get-value account) --role roles/iam.serviceAccountTokenCreator
+```
+
+Then add `PP_IMPERSONATE_SA=$SA` to the environment of `npm run token` and of the agent config below.
+
 ### Connect an agent — stdio (the agent starts the server)
 
 **Claude Code**

@@ -13,7 +13,7 @@ await build({
   outdir: path.join(here, 'dist'),
   bundle: true, platform: 'node', format: 'esm', target: 'node20', sourcemap: false, logLevel: 'warning',
   tsconfig: path.join(here, '../tsconfig.json'), // the app's '@/...' paths
-  external: ['@modelcontextprotocol/sdk', 'firebase-admin', 'express', 'puppeteer-core'],
+  external: ['@modelcontextprotocol/sdk', 'firebase-admin', 'express', 'puppeteer-core', 'google-auth-library'],
   define: { 'import.meta.env': '{}' },
   banner: { js: "import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);" },
   plugins: [{ name: 'server-shims', setup(b) {
